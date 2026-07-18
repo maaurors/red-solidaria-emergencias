@@ -212,6 +212,41 @@ async function main() {
   r = await pedir("/api/fondo/verificar", {}, tokens.DONANTE);
   verificar("Cadena de integridad verificada", r.status === 200 && r.cuerpo?.integra === true, JSON.stringify(r.cuerpo));
 
+  // 22c. Transporte: cierra la cadena bodega -> camion -> albergue
+  r = await pedir("/api/transporte/pendientes", {}, tokens.VOLUNTARIO);
+  verificar("GET transporte/pendientes responde 200", r.status === 200 && Array.isArray(r.cuerpo));
+  const cargas = r.cuerpo || [];
+  const albergueConCarga = cargas.length > 0 ? cargas[0].id_albergue : null;
+  const asignacionesAlbergue = cargas.filter(c => c.id_albergue === albergueConCarga).map(c => c.id_asignacion);
+
+  if (asignacionesAlbergue.length > 0) {
+    r = await pedir("/api/transporte", { method: "POST", body: JSON.stringify({ id_albergue: albergueConCarga, vehiculo: "Camioneta 3/4", capacidad_kg: 500, id_asignaciones: asignacionesAlbergue }) }, tokens.VOLUNTARIO);
+    const idDespacho = r.cuerpo?.id_despacho;
+    verificar("Crear despacho responde 201", r.status === 201 && idDespacho, JSON.stringify(r.cuerpo));
+
+    // No se puede volver a tomar la misma carga
+    r = await pedir("/api/transporte", { method: "POST", body: JSON.stringify({ id_albergue: albergueConCarga, vehiculo: "Otro", id_asignaciones: asignacionesAlbergue }) }, tokens.VOLUNTARIO);
+    verificar("Carga ya tomada rechazada (409)", r.status === 409);
+
+    r = await pedir("/api/transporte", { method: "POST", body: JSON.stringify({ id_albergue: albergueConCarga, vehiculo: "X", id_asignaciones: asignacionesAlbergue }) }, tokens.DONANTE);
+    verificar("DONANTE no puede crear despachos (403)", r.status === 403);
+
+    // No se puede entregar sin estar en ruta
+    r = await pedir(`/api/transporte/${idDespacho}/entregar`, { method: "POST", body: JSON.stringify({ foto: "data:image/jpeg;base64,entrega" }) }, tokens.VOLUNTARIO);
+    verificar("Entregar sin estar en ruta rechazado (409)", r.status === 409);
+
+    r = await pedir(`/api/transporte/${idDespacho}/en-ruta`, { method: "POST", body: JSON.stringify({}) }, tokens.VOLUNTARIO);
+    verificar("Marcar en ruta responde 200", r.status === 200);
+
+    r = await pedir(`/api/transporte/${idDespacho}/entregar`, { method: "POST", body: JSON.stringify({ foto: "data:image/jpeg;base64,entrega" }) }, tokens.VOLUNTARIO);
+    verificar("Confirmar entrega con foto responde 200", r.status === 200, JSON.stringify(r.cuerpo));
+
+    // Tras entregar, esas cargas ya no aparecen como pendientes de despacho
+    r = await pedir("/api/transporte/pendientes", {}, tokens.VOLUNTARIO);
+    const siguenPendientes = (r.cuerpo || []).some(c => asignacionesAlbergue.includes(c.id_asignacion));
+    verificar("Cargas entregadas ya no estan pendientes", !siguenPendientes);
+  }
+
   // 23. SSO de Google: validaciones del endpoint
   r = await pedir("/api/auth/google", { method: "POST", body: JSON.stringify({}) });
   verificar("Google sin id_token rechazado (400)", r.status === 400);

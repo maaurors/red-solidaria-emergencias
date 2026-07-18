@@ -370,6 +370,15 @@ export function IconoChat({ color, size = 22 }) {
   );
 }
 
+export function IconoCamion({ color, size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 6h10v9H3zM13 9h4l3 3v3h-7z" {...trazo(color)} />
+      <Path d="M7.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" {...trazo(color)} />
+    </Svg>
+  );
+}
+
 export function IconoEscudo({ color, size = 22 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -395,4 +404,5 @@ export const ICONOS_PESTANA = {
   chat: IconoChat,
   acopio: IconoCaja,
   fondo: IconoEscudo,
+  transporte: IconoCamion,
 };
