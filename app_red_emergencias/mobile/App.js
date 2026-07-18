@@ -29,6 +29,7 @@ import ChatSOS from "./src/pantallas/ChatSOS";
 import Registro from "./src/pantallas/Registro";
 import Acopio from "./src/pantallas/Acopio";
 import Fondo from "./src/pantallas/Fondo";
+import Transporte from "./src/pantallas/Transporte";
 import { LinearGradient } from "expo-linear-gradient";
 
 const { width: ANCHO } = Dimensions.get("window");
@@ -47,6 +48,7 @@ const PESTANAS = {
     { clave: "inicio", titulo: "Inicio", Componente: Inicio },
     { clave: "mapa", titulo: "Mapa", Componente: Mapa },
     { clave: "deficit", titulo: "Urgencias", Componente: Deficit },
+    { clave: "transporte", titulo: "Rutas", Componente: Transporte },
     { clave: "turnos", titulo: "Turnos", Componente: Turnos },
     { clave: "chat", titulo: "Chat", Componente: ChatSOS },
     { clave: "impacto", titulo: "Impacto", Componente: Impacto },
