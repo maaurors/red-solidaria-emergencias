@@ -1,0 +1,16 @@
+# Dependencias
+node_modules/
+
+# Secretos: credenciales de BD, JWT y client IDs reales
+# El .env NUNCA se sube; usar .env.example como plantilla
+*.env
+.env
+app_red_emergencias/backend/.env
+
+# Proyecto Expo generado por iniciar.sh (la fuente de verdad es mobile/)
+app_red_emergencias/red-emergencias-app/
+
+# Logs y temporales
+*.log
+.expo/
+.DS_Store
