@@ -370,6 +370,15 @@ export function IconoChat({ color, size = 22 }) {
   );
 }
 
+export function IconoEscudo({ color, size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" {...trazo(color)} />
+      <Path d="M9 12l2 2 4-4" {...trazo(color)} />
+    </Svg>
+  );
+}
+
 // Mapa de iconos por clave de pestana
 export const ICONOS_PESTANA = {
   inicio: IconoInicio,
@@ -385,4 +394,5 @@ export const ICONOS_PESTANA = {
   impacto: IconoEstrella,
   chat: IconoChat,
   acopio: IconoCaja,
+  fondo: IconoEscudo,
 };

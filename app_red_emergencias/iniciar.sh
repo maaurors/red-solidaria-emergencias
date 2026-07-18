@@ -53,6 +53,7 @@ if [ -n "$MYSQL_BIN" ]; then
   "$MYSQL_BIN" --force -u "$DB_USER" ${DB_PASS:+-p"$DB_PASS"} < "$BACKEND/sql/03_destino.sql" 2>/dev/null || true
   "$MYSQL_BIN" --force -u "$DB_USER" ${DB_PASS:+-p"$DB_PASS"} < "$BACKEND/sql/04_auditoria.sql" 2>/dev/null || true
   "$MYSQL_BIN" --force -u "$DB_USER" ${DB_PASS:+-p"$DB_PASS"} < "$BACKEND/sql/05_sso.sql" 2>/dev/null || true
+  "$MYSQL_BIN" --force -u "$DB_USER" ${DB_PASS:+-p"$DB_PASS"} < "$BACKEND/sql/06_fondo.sql" 2>/dev/null || true
   verde "  Coordenadas y esquemas de destino cargados"
 else
   rojo "  No encontre el cliente mysql en el PATH."
@@ -115,14 +116,16 @@ fi
 cp "$MOVIL/App.js" "$APP_EXPO/App.js"
 rm -rf "$APP_EXPO/src"
 cp -r "$MOVIL/src" "$APP_EXPO/src"
-verde "  Codigo de la app copiado"
+[ -f "$MOVIL/app.json" ] && cp "$MOVIL/app.json" "$APP_EXPO/app.json"
+[ -f "$MOVIL/eas.json" ] && cp "$MOVIL/eas.json" "$APP_EXPO/eas.json"
+verde "  Codigo y configuracion de la app copiados"
 
 # Dependencias nativas (mapa, camara, QR) — expo install elige la version
 # compatible con el SDK del proyecto. Rapido si ya estan instaladas.
 cd "$APP_EXPO"
-if [ ! -d node_modules/react-native-maps ] || [ ! -d node_modules/expo-camera ] || [ ! -d node_modules/react-native-qrcode-svg ] || [ ! -d node_modules/expo-linear-gradient ] || [ ! -d node_modules/expo-local-authentication ] || [ ! -d node_modules/expo-auth-session ]; then
+if [ ! -d node_modules/react-native-maps ] || [ ! -d node_modules/expo-camera ] || [ ! -d node_modules/react-native-qrcode-svg ] || [ ! -d node_modules/expo-linear-gradient ] || [ ! -d node_modules/expo-local-authentication ] || [ ! -d node_modules/expo-auth-session ] || [ ! -d node_modules/expo-image-picker ]; then
   azul "  Instalando dependencias nativas de la app..."
-  npx expo install react-native-maps expo-camera react-native-svg @react-native-async-storage/async-storage expo-local-authentication expo-linear-gradient expo-auth-session expo-web-browser expo-crypto
+  npx expo install react-native-maps expo-camera react-native-svg @react-native-async-storage/async-storage expo-local-authentication expo-linear-gradient expo-auth-session expo-web-browser expo-crypto expo-image-picker
   npm install react-native-qrcode-svg --silent
 fi
 verde "  Dependencias de la app OK"

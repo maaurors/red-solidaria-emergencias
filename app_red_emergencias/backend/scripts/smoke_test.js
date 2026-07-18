@@ -179,6 +179,39 @@ async function main() {
   r = await pedir("/api/auditoria", {}, tokens.DONANTE);
   verificar("DONANTE no puede ver auditoria (403)", r.status === 403);
 
+  // 22b. Fondo Transparente: campana, aportes, egresos y cadena de integridad
+  r = await pedir("/api/fondo/campanas", { method: "POST", body: JSON.stringify({ nombre: "Frazadas Valparaiso", meta_monto: 500000, id_emergencia: 1 }) }, tokens.COORDINADOR);
+  const idCampana = r.cuerpo?.id_campana;
+  verificar("Campana creada (201)", r.status === 201 && idCampana);
+  r = await pedir("/api/fondo/campanas", { method: "POST", body: JSON.stringify({ nombre: "X", meta_monto: 1000, id_emergencia: 1 }) }, tokens.DONANTE);
+  verificar("DONANTE no puede crear campanas (403)", r.status === 403);
+
+  r = await pedir("/api/fondo/aportes", { method: "POST", body: JSON.stringify({ id_campana: idCampana, monto: 100000, foto: "data:image/jpeg;base64,comprobante" }) }, tokens.DONANTE);
+  verificar("Aporte registrado con hash (201)", r.status === 201 && /^[a-f0-9]{64}$/.test(r.cuerpo?.hash || ""));
+
+  r = await pedir("/api/fondo/egresos", { method: "POST", body: JSON.stringify({ id_campana: idCampana, monto: 999999, proveedor: "Super", foto: "data:image/jpeg;base64,boleta" }) }, tokens.COORDINADOR);
+  verificar("Egreso sobre el saldo rechazado (409)", r.status === 409);
+
+  r = await pedir("/api/fondo/egresos", { method: "POST", body: JSON.stringify({ id_campana: idCampana, monto: 40000, proveedor: "Supermercado", descripcion: "20 frazadas", foto: "data:image/jpeg;base64,boleta", items: [{ id_item: 3, cantidad: 20 }] }) }, tokens.COORDINADOR);
+  verificar("Egreso con boleta e items responde 201 con donacion", r.status === 201 && r.cuerpo?.id_donacion, JSON.stringify(r.cuerpo));
+  r = await pedir("/api/fondo/egresos", { method: "POST", body: JSON.stringify({ id_campana: idCampana, monto: 1000, proveedor: "X", foto: "f" }) }, tokens.DONANTE);
+  verificar("DONANTE no puede registrar egresos (403)", r.status === 403);
+
+  r = await pedir("/api/fondo/campanas", {}, tokens.DONANTE);
+  const campanaResumen = (r.cuerpo || []).find(c => c.id_campana === idCampana);
+  verificar("Resumen de campana: recaudado 100000, gastado 40000, saldo 60000",
+    campanaResumen && Number(campanaResumen.recaudado) === 100000 && Number(campanaResumen.gastado) === 40000 && Number(campanaResumen.saldo) === 60000,
+    JSON.stringify(campanaResumen));
+
+  r = await pedir(`/api/fondo/campanas/${idCampana}`, {}, tokens.DONANTE);
+  verificar("Libro mayor de campana responde con movimientos", r.status === 200 && r.cuerpo.length >= 2);
+  const movConFoto = (r.cuerpo || []).find(m => m.tiene_foto);
+  r = await pedir(`/api/fondo/movimientos/${movConFoto?.id_movimiento}/foto`, {}, tokens.DONANTE);
+  verificar("Foto de boleta recuperable con su hash", r.status === 200 && r.cuerpo?.hash_foto);
+
+  r = await pedir("/api/fondo/verificar", {}, tokens.DONANTE);
+  verificar("Cadena de integridad verificada", r.status === 200 && r.cuerpo?.integra === true, JSON.stringify(r.cuerpo));
+
   // 23. SSO de Google: validaciones del endpoint
   r = await pedir("/api/auth/google", { method: "POST", body: JSON.stringify({}) });
   verificar("Google sin id_token rechazado (400)", r.status === 400);

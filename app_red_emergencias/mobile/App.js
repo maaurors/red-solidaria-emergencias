@@ -28,6 +28,7 @@ import ReportarEmergencia from "./src/pantallas/ReportarEmergencia";
 import ChatSOS from "./src/pantallas/ChatSOS";
 import Registro from "./src/pantallas/Registro";
 import Acopio from "./src/pantallas/Acopio";
+import Fondo from "./src/pantallas/Fondo";
 import { LinearGradient } from "expo-linear-gradient";
 
 const { width: ANCHO } = Dimensions.get("window");
@@ -38,6 +39,7 @@ const PESTANAS = {
     { clave: "envivo", titulo: "En Vivo", Componente: EmergenciasVivo },
     { clave: "mapa", titulo: "Mapa", Componente: Mapa },
     { clave: "donar", titulo: "Donar", Componente: Donar },
+    { clave: "fondo", titulo: "Fondo", Componente: Fondo },
     { clave: "mias", titulo: "Aportes", Componente: MisDonaciones },
     { clave: "chat", titulo: "Chat", Componente: ChatSOS },
   ],
@@ -54,7 +56,7 @@ const PESTANAS = {
     { clave: "mapa", titulo: "Mapa", Componente: Mapa },
     { clave: "coordinar", titulo: "Asignar", Componente: Coordinar },
     { clave: "escanear", titulo: "Escanear", Componente: Escanear },
-    { clave: "chat", titulo: "Chat", Componente: ChatSOS },
+    { clave: "fondo", titulo: "Fondo", Componente: Fondo },
     { clave: "impacto", titulo: "Impacto", Componente: Impacto },
   ],
 };

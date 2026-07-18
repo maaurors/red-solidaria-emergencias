@@ -127,6 +127,40 @@ El servidor verifica cada id_token directamente contra Google y valida
 que fue emitido para esta aplicación; los usuarios nuevos por Google
 entran como DONANTE sin RUT (pueden completarlo después).
 
+## Compilar app instalable para Android (APK)
+
+La app corre en iPhone y Android via Expo Go (mismo QR). Para generar un
+APK instalable en cualquier Android SIN Expo Go, se usa EAS Build: la
+compilación ocurre en los servidores de Expo (plan gratuito, ~15 min).
+
+1. Crear cuenta gratis en https://expo.dev (una para el grupo).
+2. Instalar la CLI e iniciar sesión:
+
+```bash
+npm install -g eas-cli
+eas login
+```
+
+3. Compilar (desde el proyecto Expo):
+
+```bash
+cd red-emergencias-app
+eas build --platform android --profile preview
+```
+
+4. Al terminar entrega un enlace: se abre en el teléfono Android y se
+   instala el APK directamente (aceptar "instalar de origen desconocido").
+
+Notas importantes:
+
+- El APK instalado sigue necesitando el backend encendido y el teléfono
+  en la misma red wifi (la IP está en `src/api.js`). Para que funcione
+  desde cualquier lugar habría que desplegar el backend en la nube.
+- La config ya permite HTTP en Android (`usesCleartextTraffic`), los
+  permisos de cámara y el identificador `cl.redsolidaria.emergencias`.
+- iPhone instalable requiere cuenta Apple Developer (US$99/año); sin
+  ella, en iPhone se usa via Expo Go, que para la demo es equivalente.
+
 ## Alcance (versión demo)
 
 MVP académico: demuestra que el modelo de datos funciona de punta a punta.

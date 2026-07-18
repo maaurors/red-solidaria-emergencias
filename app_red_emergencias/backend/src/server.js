@@ -21,6 +21,8 @@ app.use(cors({
 }));
 
 app.use(compression());                     // Compresion gzip para respuestas
+// El fondo recibe fotografias de boletas en base64: limite mayor solo ahi
+app.use("/api/fondo", express.json({ limit: "3mb" }));
 app.use(express.json({ limit: "100kb" }));   // Cuerpos acotados
 app.disable("x-powered-by");                // No anunciar el framework
 
@@ -110,6 +112,7 @@ app.use("/api/turnos", require("./rutas/turnos"));
 app.use("/api/necesidades", require("./rutas/necesidades"));
 app.use("/api/estadisticas", require("./rutas/estadisticas"));
 app.use("/api/auditoria", require("./rutas/auditoria"));
+app.use("/api/fondo", require("./rutas/fondo"));
 
 // ─── Manejo de errores ────────────────────────────────────────
 
