@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SinVisto Chile</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Plataforma chilena de transparencia laboral: reseñas, sueldos líquidos, entrevistas y el Índice de Respuesta para terminar con el ghosting.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: barra superior fija con navegacion por secciones; cada seccion es una vista (hash) en una sola columna de 72rem con grillas que se apilan en movil. */
+:root {
+  /* Paleta: azul cordillera (fondo oscuro de marca), papel frio (fondo), cobalto "doble check" (acento), tres semanticos para el semaforo de respuesta. */
+  --bg: #F2F4F7;
+  --surface: #FFFFFF;
+  --ink: #141B2D;
+  --muted: #56607A;
+  --line: #D9DEE8;
+  --brand: #18233F;
+  --brand-ink: #F2F4F7;
+  --accent: #2B54E0;
+  --accent-soft: #E3E9FC;
+  --ok: #1D7A4E;
+  --ok-soft: #DDF1E6;
+  --warn: #9A6200;
+  --warn-soft: #FBEFD5;
+  --bad: #B3261E;
+  --bad-soft: #F9E0DE;
+  --check-grey: #9AA3B5;
+
+  /* Tipografia: display con caracter, cuerpo de alta legibilidad (accesibilidad es parte de la mision), mono para cifras y plazos. */
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --r: 10px;
+  --wrap: 72rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1322; --surface: #161D31; --ink: #E7EAF2; --muted: #9AA3BA; --line: #29324A;
+    --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
+    --ok: #5CCB93; --ok-soft: #12321F; --warn: #E8B455; --warn-soft: #3A2B0C;
+    --bad: #F2867E; --bad-soft: #3D1614; --check-grey: #6C7690;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1322; --surface: #161D31; --ink: #E7EAF2; --muted: #9AA3BA; --line: #29324A;
+  --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
+  --ok: #5CCB93; --ok-soft: #12321F; --warn: #E8B455; --warn-soft: #3A2B0C;
+  --bad: #F2867E; --bad-soft: #3D1614; --check-grey: #6C7690;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 1rem; line-height: 1.6;
+}
+/* Franja superior pintada para que el contenido no se vea bajo la barra del sistema en moviles. */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--brand); }
+
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.12; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 5.4vw, 3.9rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 1.15rem; color: var(--muted); max-width: 62ch; }
+.small { font-size: .875rem; color: var(--muted); }
+
+/* Contenedor con el gutter lateral seguro (minimo 16px y respeta barras del sistema). */
+.wrap {
+  max-width: var(--wrap); margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- Barra de navegacion ---------- */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--brand); color: var(--brand-ink); }
+.topbar .wrap { display: flex; align-items: center; gap: 1.25rem; padding-block: .7rem; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: .5rem; font-family: var(--f-display); font-weight: 800; font-size: 1.3rem; color: var(--brand-ink); text-decoration: none; }
+.logo svg { width: 30px; height: 30px; }
+.nav { display: flex; gap: .25rem; flex-wrap: wrap; flex: 1; }
+.nav a {
+  color: var(--brand-ink); opacity: .78; text-decoration: none; font-size: .92rem;
+  padding: .35rem .7rem; border-radius: 999px;
+}
+.nav a:hover { opacity: 1; background: rgba(255,255,255,.08); }
+.nav a[aria-current="page"] { opacity: 1; background: var(--accent); color: #fff; }
+.theme-btn { background: transparent; border: 1px solid rgba(255,255,255,.25); color: var(--brand-ink); border-radius: 999px; padding: .3rem .75rem; font: inherit; font-size: .85rem; cursor: pointer; }
+
+/* ---------- Vistas ---------- */
+main > section { padding-block: 2.5rem 4rem; }
+.view-head { display: grid; gap: .6rem; margin-bottom: 2rem; }
+
+/* ---------- Hero ---------- */
+.hero { background: var(--brand); color: var(--brand-ink); }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 2.5rem; align-items: center; padding-block: 3rem 3.5rem; }
+.hero .lead { color: var(--brand-ink); opacity: .82; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.search {
+  display: flex; gap: .5rem; margin-top: 1.6rem; background: var(--surface); padding: .4rem; border-radius: 14px;
+  max-width: 40rem;
+}
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: inherit; padding: .6rem .75rem; }
+.search input:focus { outline: none; }
+.search:focus-within { box-shadow: 0 0 0 3px var(--accent); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+  background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+  padding: .65rem 1.1rem; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.btn.sm { padding: .4rem .75rem; font-size: .875rem; }
+.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 2rem; }
+.hero-stats div { display: grid; }
+.hero-stats b { font-family: var(--f-mono); font-size: 1.6rem; }
+.hero-stats span { font-size: .82rem; opacity: .75; }
+.hero-art { width: 100%; max-width: 100%; height: auto; }
+
+/* ---------- Bloques generales ---------- */
+.grid { display: grid; gap: 1rem; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 1.25rem; min-width: 0; }
+.card p + p { margin-top: .5rem; }
+.pill { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 700; padding: .15rem .6rem; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
+.sample-tag { font-family: var(--f-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--warn); }
+
+/* Comparacion Glassdoor vs SinVisto en la portada */
+.compare { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.compare th, .compare td { text-align: left; padding: .7rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.compare th { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.compare td:last-child { color: var(--ink); font-weight: 700; }
+.compare td:nth-child(2) { color: var(--muted); }
+.scroll-x { overflow-x: auto; }
+
+/* Escala del Indice de Respuesta */
+.ir-scale { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin-top: 1rem; }
+.ir-scale div { padding: .8rem; border-radius: 8px; }
+.ir-scale .ok { background: var(--ok-soft); color: var(--ok); }
+.ir-scale .warn { background: var(--warn-soft); color: var(--warn); }
+.ir-scale .bad { background: var(--bad-soft); color: var(--bad); }
+.ir-scale b { display: block; font-family: var(--f-mono); }
+
+.how { counter-reset: paso; display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.how li { list-style: none; counter-increment: paso; }
+.how li::before { content: "Paso " counter(paso); display: block; font-family: var(--f-mono); font-size: .75rem; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .4rem; }
+.how { padding: 0; margin: 0; }
+
+/* ---------- Empresas ---------- */
+.toolbar { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
+.field { display: grid; gap: .3rem; font-size: .85rem; color: var(--muted); }
+.field input, .field select, .field textarea {
+  font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; padding: .55rem .7rem; min-width: 0; width: 100%;
+}
+.company { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; align-items: start; }
+.mono-logo { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; font-size: 1.2rem; color: #fff; }
+.company h3 { margin-bottom: .15rem; }
+.metrics { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: .75rem; }
+.metric { display: grid; }
+.metric b { font-family: var(--f-mono); font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.metric span { font-size: .78rem; color: var(--muted); }
+.ir-ring { width: 76px; height: 76px; }
+.ir-ring text { font-family: var(--f-mono); font-weight: 600; }
+.stars { color: var(--accent); letter-spacing: .1em; }
+.badge-pledge { display: inline-flex; align-items: center; gap: .3rem; font-size: .78rem; font-weight: 700; color: var(--accent); }
+.review { border-top: 1px solid var(--line); padding-top: .9rem; margin-top: .9rem; }
+.review q { quotes: none; display: block; }
+.reply { margin-top: .6rem; padding: .6rem .8rem; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; font-size: .92rem; }
+.empty { text-align: center; padding: 2rem; color: var(--muted); }
+
+/* ---------- Sueldos ---------- */
+.calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; }
+.calc-form { display: grid; gap: .9rem; }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .75rem; }
+.breakdown { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.breakdown td { padding: .5rem 0; border-bottom: 1px dashed var(--line); }
+.breakdown td:last-child { text-align: right; font-family: var(--f-mono); }
+.breakdown tr.total td { border-bottom: 0; border-top: 2px solid var(--ink); font-weight: 700; font-size: 1.15rem; padding-top: .7rem; }
+.bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; margin-block: 1rem .4rem; background: var(--line); }
+.bar span { display: block; height: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; font-size: .8rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: .3rem; vertical-align: middle; }
+.salary-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.salary-table th, .salary-table td { padding: .65rem .7rem; border-bottom: 1px solid var(--line); text-align: left; }
+.salary-table td.num, .salary-table th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.salary-table th { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-family: var(--f-mono); font-weight: 600; }
+
+/* ---------- Entrevistas ---------- */
+.timeline { list-style: none; margin: .8rem 0 0; padding: 0; display: grid; gap: .35rem; }
+.timeline li { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: .75rem; font-size: .92rem; }
+.timeline li span:first-child { font-family: var(--f-mono); color: var(--muted); font-size: .82rem; }
+.timeline li.silence span:last-child { color: var(--bad); font-weight: 700; }
+
+/* ---------- Mis postulaciones ---------- */
+.tracker-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: .75rem; align-items: end; }
+.app-list { display: grid; gap: .6rem; margin-top: 1.25rem; }
+.app { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 1rem; align-items: center; }
+.app .days { font-family: var(--f-mono); font-size: 1.3rem; font-weight: 600; }
+.app-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+.msg-box { margin-top: 1rem; }
+.msg-box textarea { width: 100%; min-height: 9rem; font: inherit; padding: .8rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.toast { position: fixed; left: 50%; bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: .6rem 1rem; border-radius: 8px; font-size: .9rem; z-index: 20; }
+
+/* ---------- Compromiso y legal ---------- */
+.pledge-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .8rem; }
+.pledge-list li { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid var(--line); }
+.pledge-list li b.mono { color: var(--accent); font-size: 1.05rem; }
+.law { display: grid; gap: .35rem; }
+.law .eyebrow { color: var(--accent); }
+details.card summary { cursor: pointer; font-weight: 700; font-family: var(--f-display); font-size: 1.05rem; }
+details.card[open] summary { margin-bottom: .6rem; }
+details.card ul { margin: 0; padding-left: 1.2rem; display: grid; gap: .35rem; }
+
+footer { border-top: 1px solid var(--line); padding-block: 2rem; color: var(--muted); font-size: .85rem; }
+footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: space-between; }
+
+/* ---------- Responsive: todo pasa a una columna en pantallas angostas ---------- */
+@media (max-width: 900px) {
+  .hero .wrap, .calc, .g3 { grid-template-columns: minmax(0, 1fr); }
+  .how { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tracker-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .app-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .hero-art { max-width: 420px; }
+}
+@media (max-width: 600px) {
+  .g2, .how, .row2, .tracker-form, .ir-scale { grid-template-columns: minmax(0, 1fr); }
+  .company { grid-template-columns: auto minmax(0, 1fr); }
+  .company .ir-ring { grid-column: 1 / -1; }
+  .pledge-list li, .timeline li { grid-template-columns: minmax(0, 1fr); gap: .2rem; }
+  .search { flex-direction: column; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-art .check2 { animation: turnBlue 2.4s ease-in-out .6s both; }
+  @keyframes turnBlue { from { stroke: var(--check-grey); } to { stroke: var(--accent); } }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="logo" href="#inicio" aria-label="SinVisto, ir al inicio">
+      <!-- Logotipo: burbuja de chat con doble check, el simbolo del "visto" -->
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M5 6h22a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H13l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="var(--accent)"/>
+        <path d="M8.5 14.5l3 3 6-6M14 17.5l1 0.8 6-6.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      SinVisto
+    </a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="#inicio">Inicio</a>
+      <a href="#empresas">Empresas</a>
+      <a href="#sueldos">Sueldos</a>
+      <a href="#entrevistas">Entrevistas</a>
+      <a href="#postulaciones">Mis postulaciones</a>
+      <a href="#compromiso">Para empresas</a>
+      <a href="#legal">Leyes y políticas</a>
+    </nav>
+    <button class="theme-btn" id="themeBtn" type="button">Cambiar tema</button>
+  </div>
+</header>
+
+<main id="app">
+
+<!-- =========================== INICIO =========================== -->
+<section id="v-inicio" data-view="inicio" style="padding-block:0 4rem">
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow" style="color:var(--brand-ink);opacity:.7">Transparencia laboral hecha en Chile</p>
+        <h1 style="margin-top:.6rem">Postulaste. Te entrevistaron. <em>Y te dejaron en visto.</em></h1>
+        <p class="lead" style="margin-top:1rem">En SinVisto las empresas se miden por algo que ninguna otra plataforma mide: si le responden a la gente. Reseñas, sueldos líquidos reales y el Índice de Respuesta de cada empleador en Chile.</p>
+        <form class="search" id="heroSearch" role="search">
+          <label for="heroQ" class="small" style="position:absolute;left:-9999px">Buscar empresa o cargo</label>
+          <input id="heroQ" type="search" placeholder="Busca una empresa, cargo o región" autocomplete="off">
+          <button class="btn" type="submit">Buscar</button>
+        </form>
+        <div class="hero-stats" aria-label="Cifras de ejemplo">
+          <div><b>62%</b><span>de postulantes entrevistados<br>nunca recibe respuesta*</span></div>
+          <div><b>10</b><span>días hábiles: plazo del<br>Compromiso SinVisto</span></div>
+          <div><b>$0</b><span>costo para leer todo.<br>Sin muro de contenido.</span></div>
+        </div>
+        <p class="small" style="color:var(--brand-ink);opacity:.55;margin-top:.8rem">*Cifra ilustrativa del prototipo. Se reemplaza por datos reales al lanzar.</p>
+      </div>
+      <!-- Ilustracion principal: telefono con un chat de postulacion. El segundo check pasa de gris a azul: la empresa respondio. Al fondo, la cordillera. -->
+      <svg class="hero-art" viewBox="0 0 420 400" role="img" aria-label="Ilustración de un teléfono con un mensaje de postulación respondido, con la cordillera de los Andes de fondo">
+        <path d="M0 330 L60 250 L95 285 L150 190 L200 260 L240 215 L300 300 L345 230 L420 320 L420 400 L0 400 Z" fill="var(--accent)" opacity=".18"/>
+        <path d="M150 190 L170 218 L160 222 L150 208 L140 222 L132 216 Z" fill="var(--brand-ink)" opacity=".35"/>
+        <path d="M345 230 L360 252 L350 254 L345 246 L338 254 L332 250 Z" fill="var(--brand-ink)" opacity=".35"/>
+        <rect x="110" y="30" width="200" height="340" rx="28" fill="var(--surface)" stroke="var(--line)" stroke-width="2"/>
+        <rect x="185" y="44" width="50" height="7" rx="3.5" fill="var(--line)"/>
+        <rect x="126" y="66" width="168" height="36" rx="8" fill="var(--accent-soft)"/>
+        <circle cx="146" cy="84" r="10" fill="var(--accent)"/>
+        <rect x="164" y="76" width="80" height="7" rx="3.5" fill="var(--ink)" opacity=".7"/>
+        <rect x="164" y="88" width="50" height="6" rx="3" fill="var(--muted)" opacity=".6"/>
+        <rect x="150" y="120" width="140" height="62" rx="12" fill="var(--accent)" opacity=".9"/>
+        <rect x="162" y="134" width="110" height="6" rx="3" fill="#fff" opacity=".9"/>
+        <rect x="162" y="146" width="92" height="6" rx="3" fill="#fff" opacity=".9"/>
+        <path d="M244 168l5 5 9-9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M253 171l2 2 9-9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="126" y="200" width="150" height="88" rx="12" fill="var(--bg)" stroke="var(--line)"/>
+        <rect x="138" y="214" width="120" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
+        <rect x="138" y="226" width="104" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
+        <rect x="138" y="238" width="116" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
+        <rect x="138" y="250" width="70" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
+        <path d="M232 274l5 5 9-9" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path class="check2" d="M241 277l2 2 9-9" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="126" y="306" width="168" height="38" rx="19" fill="var(--ok-soft)"/>
+        <text x="210" y="330" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600" fill="var(--ok)">Respondió en 4 días</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="wrap" style="display:grid;gap:3.5rem;margin-top:3rem">
+    <div class="grid g2" style="align-items:start;gap:2rem">
+      <div style="display:grid;gap:.8rem">
+        <p class="eyebrow">La métrica que faltaba</p>
+        <h2>Índice de Respuesta</h2>
+        <p>Porcentaje de personas entrevistadas que recibieron una respuesta final (sí o no) dentro de 10 días hábiles después de su última entrevista. Lo calculamos con los reportes verificados de los propios postulantes y lo publicamos en el perfil de cada empresa.</p>
+        <p class="small">Fórmula: IR = respuestas finales en plazo ÷ procesos con entrevista reportados en los últimos 12 meses. Se publica solo con 15 reportes o más, para que nadie pueda ser identificado.</p>
+        <div class="ir-scale">
+          <div class="ok"><b>80–100%</b>Responde</div>
+          <div class="warn"><b>50–79%</b>Irregular</div>
+          <div class="bad"><b>0–49%</b>Deja en visto</div>
+        </div>
+      </div>
+      <div class="card scroll-x" style="padding:.5rem">
+        <table class="compare">
+          <thead><tr><th>Tema</th><th>Plataformas globales</th><th>SinVisto</th></tr></thead>
+          <tbody>
+            <tr><td>Ghosting</td><td>No se mide</td><td>Índice de Respuesta público por empresa</td></tr>
+            <tr><td>Sueldos</td><td>Bruto, a veces en dólares</td><td>Bruto y líquido en CLP, con AFP, salud y cesantía</td></tr>
+            <tr><td>Acceso</td><td>Debes aportar para seguir leyendo</td><td>Lectura libre; aportar suma, no desbloquea</td></tr>
+            <tr><td>Ofertas</td><td>Se publican tal cual</td><td>Se revisan contra el art. 2 del Código del Trabajo</td></tr>
+            <tr><td>Datos personales</td><td>Normativa extranjera</td><td>Ley 21.719 y derechos ARCOP en Chile</td></tr>
+            <tr><td>Tu seguimiento</td><td>No existe</td><td>Panel de postulaciones con alertas de plazo</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:grid;gap:1.25rem">
+      <div class="view-head" style="margin:0"><p class="eyebrow">Cómo funciona</p><h2>Del silencio a un dato público</h2></div>
+      <ol class="how">
+        <li class="card"><h3>Registras tu postulación</h3><p class="small" style="margin-top:.4rem">Empresa, cargo y fecha de tu última entrevista. Queda en tu panel, solo visible para ti.</p></li>
+        <li class="card"><h3>Contamos los días hábiles</h3><p class="small" style="margin-top:.4rem">Al día 7 te sugerimos un mensaje de seguimiento cordial. Al día 10 se cumple el plazo.</p></li>
+        <li class="card"><h3>Reportas el resultado</h3><p class="small" style="margin-top:.4rem">Respondieron, no respondieron, o respondieron tarde. Adjuntas evidencia que nadie más ve.</p></li>
+        <li class="card"><h3>El índice se actualiza</h3><p class="small" style="margin-top:.4rem">Se agregan los reportes anonimizados y la empresa ve su índice, con derecho a réplica.</p></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== EMPRESAS =========================== -->
+<section id="v-empresas" data-view="empresas" hidden>
+  <div class="wrap">
+    <div class="view-head">
+      <p class="eyebrow">Perfiles de empleadores</p>
+      <h2>Empresas</h2>
+      <p class="lead">Calificación general, Índice de Respuesta y reseñas moderadas. Las empresas pueden responder cada reseña.</p>
+      <p class="sample-tag">Empresas y reseñas ficticias de ejemplo</p>
+    </div>
+    <div class="toolbar">
+      <div class="field" style="flex:1;min-width:12rem"><label for="coQ">Buscar</label><input id="coQ" type="search" placeholder="Nombre, industria o región"></div>
+      <div class="field"><label for="coSort">Ordenar por</label>
+        <select id="coSort">
+          <option value="ir">Índice de Respuesta</option>
+          <option value="rating">Calificación</option>
+          <option value="reviews">Cantidad de reseñas</option>
+        </select>
+      </div>
+      <div class="field"><label for="coRegion">Región</label>
+        <select id="coRegion"><option value="">Todas</option></select>
+      </div>
+    </div>
+    <div id="coList" class="grid"></div>
+  </div>
+</section>
+
+<!-- =========================== SUELDOS =========================== -->
+<section id="v-sueldos" data-view="sueldos" hidden>
+  <div class="wrap" style="display:grid;gap:2.5rem">
+    <div class="view-head" style="margin:0">
+      <p class="eyebrow">Sueldos en pesos chilenos</p>
+      <h2>Lo que de verdad llega a tu cuenta</h2>
+      <p class="lead">En Chile se negocia en bruto y se vive con el líquido. Calcula tu sueldo líquido aproximado con los descuentos legales de un contrato indefinido.</p>
+    </div>
+
+    <div class="calc">
+      <form class="card calc-form" id="calcForm">
+        <div class="field"><label for="cBruto">Sueldo bruto mensual (CLP)</label><input id="cBruto" type="number" min="0" step="10000" value="1500000" inputmode="numeric"></div>
+        <div class="row2">
+          <div class="field"><label for="cAfp">Cotización AFP total (%)</label><input id="cAfp" type="number" min="10" max="13" step="0.01" value="11.27"></div>
+          <div class="field"><label for="cSalud">Salud: Fonasa o Isapre (%)</label><input id="cSalud" type="number" min="7" max="20" step="0.1" value="7"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="cContrato">Tipo de contrato</label>
+            <select id="cContrato"><option value="0.6">Indefinido (cesantía 0,6%)</option><option value="0">Plazo fijo (cesantía 0%)</option></select>
+          </div>
+          <div class="field"><label for="cUtm">Valor UTM del mes (CLP)</label><input id="cUtm" type="number" min="1" step="1" value="69000"></div>
+        </div>
+        <p class="small">AFP: 10% obligatorio más la comisión de tu administradora. Ajusta la UTM al valor publicado por el SII para el mes. No considera topes imponibles, gratificación ni APV.</p>
+      </form>
+      <div class="card" aria-live="polite">
+        <p class="eyebrow">Desglose mensual estimado</p>
+        <table class="breakdown" id="calcTable" style="margin-top:.6rem"></table>
+        <div class="bar" id="calcBar" aria-hidden="true"></div>
+        <div class="legend">
+          <span><i style="background:var(--ok)"></i>Líquido</span>
+          <span><i style="background:var(--accent)"></i>AFP</span>
+          <span><i style="background:var(--warn)"></i>Salud</span>
+          <span><i style="background:var(--muted)"></i>Cesantía</span>
+          <span><i style="background:var(--bad)"></i>Impuesto único</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;gap:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:1rem;flex-wrap:wrap">
+        <div><h3>Rangos reportados por cargo</h3><p class="sample-tag" style="margin-top:.3rem">Datos de ejemplo, Región Metropolitana</p></div>
+        <div class="field"><label for="salQ">Filtrar cargo</label><input id="salQ" type="search" placeholder="Ej: analista"></div>
+      </div>
+      <div class="card scroll-x" style="padding:.25rem .5rem">
+        <table class="salary-table">
+          <thead><tr><th>Cargo</th><th class="num">Bruto p25</th><th class="num">Bruto mediana</th><th class="num">Bruto p75</th><th class="num">Reportes</th></tr></thead>
+          <tbody id="salBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== ENTREVISTAS =========================== -->
+<section id="v-entrevistas" data-view="entrevistas" hidden>
+  <div class="wrap">
+    <div class="view-head">
+      <p class="eyebrow">Experiencias de postulación</p>
+      <h2>Entrevistas</h2>
+      <p class="lead">Cada experiencia muestra la línea de tiempo completa del proceso, incluido el silencio. Así sabes cuánto demora cada etapa antes de postular.</p>
+      <p class="sample-tag">Experiencias ficticias de ejemplo</p>
+    </div>
+    <div class="grid g2" id="ivList"></div>
+  </div>
+</section>
+
+<!-- =========================== MIS POSTULACIONES =========================== -->
+<section id="v-postulaciones" data-view="postulaciones" hidden>
+  <div class="wrap">
+    <div class="view-head">
+      <p class="eyebrow">Tu panel privado</p>
+      <h2>Mis postulaciones</h2>
+      <p class="lead">Registra tus procesos y te avisamos cuándo corresponde hacer seguimiento. Los datos quedan guardados solo en este navegador.</p>
+    </div>
+    <form class="card tracker-form" id="trForm">
+      <div class="field"><label for="trCo">Empresa</label><input id="trCo" required placeholder="Nombre de la empresa"></div>
+      <div class="field"><label for="trRole">Cargo</label><input id="trRole" required placeholder="Cargo al que postulaste"></div>
+      <div class="field"><label for="trDate">Última entrevista</label><input id="trDate" type="date" required></div>
+      <div class="field"><label for="trStage">Etapa</label>
+        <select id="trStage"><option>Entrevista RR.HH.</option><option>Entrevista técnica</option><option>Entrevista final</option><option>Prueba psicolaboral</option></select>
+      </div>
+      <button class="btn" type="submit">Agregar</button>
+    </form>
+    <div id="trList" class="app-list"></div>
+    <div class="card msg-box" id="msgBox" hidden>
+      <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center">
+        <h3>Mensaje de seguimiento sugerido</h3>
+        <button class="btn sm" type="button" id="copyMsg">Copiar mensaje</button>
+      </div>
+      <label for="msgText" class="small" style="display:block;margin-block:.5rem">Puedes editarlo antes de copiarlo.</label>
+      <textarea id="msgText"></textarea>
+    </div>
+    <p class="small" style="margin-top:1rem">Los días hábiles se cuentan de lunes a viernes y aún no descuentan feriados nacionales.</p>
+  </div>
+</section>
+
+<!-- =========================== PARA EMPRESAS =========================== -->
+<section id="v-compromiso" data-view="compromiso" hidden>
+  <div class="wrap" style="display:grid;gap:2.5rem">
+    <div class="view-head" style="margin:0">
+      <p class="eyebrow">Para empleadores</p>
+      <h2>Compromiso SinVisto</h2>
+      <p class="lead">Un acuerdo público y voluntario. Las empresas que lo firman muestran un sello en su perfil y se someten a medición. Si dejan de cumplir, el sello se retira automáticamente.</p>
+    </div>
+    <div class="grid g2" style="gap:2rem;align-items:start">
+      <ul class="pledge-list">
+        <li><b class="mono">48 h</b><span>Acuso de recibo automático a toda persona que postula.</span></li>
+        <li><b class="mono">10 días</b><span>Respuesta final, positiva o negativa, a quien llegó a entrevista. Hábiles, contados desde la última entrevista.</span></li>
+        <li><b class="mono">1 línea</b><span>Motivo general del cierre cuando la persona lo pide: perfil, experiencia, vacante cerrada o cubierta internamente.</span></li>
+        <li><b class="mono">Rango</b><span>Rango de sueldo bruto publicado en cada oferta.</span></li>
+        <li><b class="mono">Art. 2</b><span>Ofertas sin requisitos discriminatorios: edad, sexo, estado civil, nacionalidad, apariencia, ni informes de deudas salvo en los cargos que la ley permite.</span></li>
+      </ul>
+      <div class="card" style="display:grid;gap:1rem">
+        <h3>Qué recibe la empresa</h3>
+        <p>Panel con su Índice de Respuesta mensual, alertas de procesos que están por vencer el plazo, plantillas de respuesta y derecho a réplica en cada reseña.</p>
+        <p>Mejor reputación como empleador y postulantes que vuelven a postular, porque fueron tratados con respeto.</p>
+        <form id="pledgeForm" style="display:grid;gap:.75rem">
+          <div class="field"><label for="pRut">RUT de la empresa</label><input id="pRut" placeholder="76.123.456-7" required autocomplete="off"></div>
+          <div class="field"><label for="pName">Razón social</label><input id="pName" placeholder="Nombre legal de la empresa" required></div>
+          <button class="btn" type="submit">Validar y solicitar el sello</button>
+          <p class="small" id="pledgeMsg" role="status"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== LEGAL =========================== -->
+<section id="v-legal" data-view="legal" hidden>
+  <div class="wrap" style="display:grid;gap:2rem">
+    <div class="view-head" style="margin:0">
+      <p class="eyebrow">Marco normativo chileno</p>
+      <h2>Leyes y políticas</h2>
+      <p class="lead">SinVisto opera bajo la ley chilena. Esta página resume en lenguaje simple las normas que aplicamos. No reemplaza asesoría legal; para denuncias formales acude a la Dirección del Trabajo.</p>
+    </div>
+
+    <div class="grid g3">
+      <div class="card law"><p class="eyebrow">Código del Trabajo, art. 2</p><h3>No discriminación en ofertas</h3><p class="small">Ninguna oferta puede exigir condiciones como sexo, edad, estado civil, raza, nacionalidad, religión u otras ajenas a la capacidad para el cargo. Rechazamos las ofertas que lo hagan.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 20.575 y art. 2</p><h3>Sin informes de deudas</h3><p class="small">No se puede condicionar la contratación a la situación comercial del postulante, salvo cargos de gerencia o que administren fondos con facultades generales.</p></div>
+      <div class="card law"><p class="eyebrow">Código del Trabajo, art. 194</p><h3>Sin test de embarazo</h3><p class="small">Ningún empleador puede exigir certificado o examen de embarazo para contratar. Las reseñas que denuncien esta práctica se destacan.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 21.643, Ley Karin</p><h3>Acoso y violencia laboral</h3><p class="small">Desde agosto de 2024 las empresas deben tener protocolos de prevención del acoso laboral, sexual y la violencia en el trabajo. Mostramos si la empresa declara su protocolo.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 21.561</p><h3>Jornada de 40 horas</h3><p class="small">La jornada máxima baja de forma gradual: 44 horas en 2024, 42 horas desde abril de 2026 y 40 horas en 2028. Las ofertas deben indicar jornada.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 21.015</p><h3>Inclusión laboral</h3><p class="small">Empresas con 100 o más trabajadores deben reservar al menos 1% para personas con discapacidad o pensión de invalidez. Se filtra en ofertas inclusivas.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 20.609, Ley Zamudio</p><h3>Antidiscriminación</h3><p class="small">Establece la acción judicial frente a discriminación arbitraria. Si tu caso lo amerita, te orientamos hacia esta vía.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 20.348</p><h3>Igualdad de remuneraciones</h3><p class="small">Hombres y mujeres que hacen el mismo trabajo deben recibir la misma remuneración. Nuestros datos de sueldo permiten ver brechas por cargo.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 21.719</p><h3>Protección de datos personales</h3><p class="small">Nueva ley chilena, con entrada en vigencia en diciembre de 2026 y fiscalizada por la Agencia de Protección de Datos Personales. La aplicamos desde el primer día.</p></div>
+    </div>
+
+    <div class="grid g2" style="align-items:start">
+      <details class="card" open>
+        <summary>Política de privacidad y anonimato</summary>
+        <ul class="small">
+          <li>Publicamos reseñas sin nombre, correo, RUT ni cargo exacto si eso permite identificarte.</li>
+          <li>La evidencia que adjuntas para verificar un proceso se usa solo para validar y se elimina a los 90 días.</li>
+          <li>Ejerces tus derechos de acceso, rectificación, supresión, oposición, portabilidad y bloqueo desde tu cuenta, con respuesta en un plazo máximo de 30 días corridos.</li>
+          <li>No vendemos datos. Las empresas ven solo cifras agregadas, nunca quién reportó.</li>
+          <li>Los datos se alojan con cifrado en reposo y en tránsito, y con registro de accesos.</li>
+        </ul>
+      </details>
+      <details class="card" open>
+        <summary>Normas de la comunidad y moderación</summary>
+        <ul class="small">
+          <li>Habla de tu experiencia y de la empresa. No nombres a personas: un nombre propio hace que la reseña no se publique.</li>
+          <li>No acuses delitos concretos de terceros en una reseña. Las injurias y calumnias son delitos en el Código Penal chileno. Para eso existe la Dirección del Trabajo, el Ministerio Público o los tribunales.</li>
+          <li>Toda reseña pasa por moderación antes de publicarse. Revisamos lenguaje ofensivo, datos personales y reseñas falsas.</li>
+          <li>La empresa tiene derecho a réplica pública en cada reseña, pero no puede borrarla ni editarla.</li>
+          <li>Una empresa no puede pagar para mejorar su puntaje ni su Índice de Respuesta.</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="card" style="display:grid;gap:.4rem">
+      <h3>¿Necesitas denunciar?</h3>
+      <p class="small">La Dirección del Trabajo recibe denuncias por vulneración de derechos laborales y acoso. Su sitio es <a href="https://www.dt.gob.cl" target="_blank" rel="noopener">dt.gob.cl</a>. SinVisto no reemplaza a ningún organismo público.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>SinVisto, prototipo de plataforma de transparencia laboral para Chile.</span>
+    <span>Todas las empresas, reseñas y cifras de esta versión son ficticias.</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   Datos de ejemplo. En produccion vienen de una API; aqui se definen
+   en memoria para que el prototipo funcione sin backend.
+   ===================================================================== */
+const COMPANIES = [
+  { id: "andes", name: "Logística Andes Norte", industry: "Logística y transporte", region: "Antofagasta", color: "#2B54E0",
+    rating: 4.1, reviews: 318, ir: 91, medianDays: 4, feedback: 72, pledge: true,
+    review: { title: "Procesos claros y te avisan siempre", body: "Tres entrevistas en dos semanas. Al final no quedé, pero me llamaron para explicarme el motivo.", role: "Postulante a analista de rutas", stars: 5 },
+    reply: "Gracias por tu comentario. Intentamos cerrar cada proceso con una llamada." },
+  { id: "pacifico", name: "Financiera Pacífico Sur", industry: "Servicios financieros", region: "Metropolitana", color: "#7A3FC4",
+    rating: 3.2, reviews: 541, ir: 38, medianDays: 0, feedback: 9, pledge: false,
+    review: { title: "Buen ambiente, pero desaparecen después de la final", body: "Llegué a entrevista final con gerencia. Nunca más supe nada. Escribí dos veces y no hubo respuesta.", role: "Postulante a ejecutivo comercial", stars: 2 },
+    reply: null },
+  { id: "austral", name: "Salmones del Fiordo", industry: "Acuicultura", region: "Los Lagos", color: "#0F8A7A",
+    rating: 3.7, reviews: 204, ir: 64, medianDays: 12, feedback: 31, pledge: true,
+    review: { title: "Responden, pero tarde", body: "Me dieron la respuesta un mes después de la última entrevista. Al menos respondieron.", role: "Postulante a técnico de planta", stars: 3 },
+    reply: "Estamos ajustando nuestros tiempos para cumplir el plazo de 10 días hábiles." },
+  { id: "valpo", name: "Puerto Digital Valparaíso", industry: "Tecnología", region: "Valparaíso", color: "#C2410C",
+    rating: 4.4, reviews: 129, ir: 86, medianDays: 6, feedback: 64, pledge: true,
+    review: { title: "La mejor experiencia de postulación que he tenido", body: "Prueba técnica corta y pagada. Feedback por escrito aunque no avancé.", role: "Postulante a desarrolladora backend", stars: 5 },
+    reply: null },
+  { id: "retail", name: "Tiendas Cordillera", industry: "Retail", region: "Biobío", color: "#B3261E",
+    rating: 2.9, reviews: 892, ir: 22, medianDays: 0, feedback: 4, pledge: false,
+    review: { title: "Nunca contestan", body: "Hice tres procesos distintos en dos años. Nunca me respondieron, ni siquiera un correo automático.", role: "Postulante a jefe de tienda", stars: 1 },
+    reply: null }
+];
+
+const SALARIES = [
+  { role: "Analista de datos", p25: 1400000, p50: 1750000, p75: 2200000, n: 412 },
+  { role: "Desarrollador/a backend", p25: 1800000, p50: 2400000, p75: 3100000, n: 655 },
+  { role: "Ejecutivo/a comercial", p25: 850000, p50: 1100000, p75: 1500000, n: 980 },
+  { role: "Técnico/a en mantención", p25: 900000, p50: 1150000, p75: 1450000, n: 377 },
+  { role: "Enfermero/a clínico/a", p25: 1300000, p50: 1550000, p75: 1850000, n: 289 },
+  { role: "Jefe/a de tienda", p25: 1000000, p50: 1250000, p75: 1600000, n: 341 },
+  { role: "Contador/a auditor/a", p25: 1200000, p50: 1600000, p75: 2100000, n: 503 }
+];
+
+const INTERVIEWS = [
+  { company: "Puerto Digital Valparaíso", role: "Desarrolladora backend", difficulty: "Media", outcome: "ok", outcomeText: "Respondió en 6 días",
+    steps: [["Día 0", "Postulación por el sitio"], ["Día 3", "Llamada de RR.HH., 20 minutos"], ["Día 8", "Prueba técnica pagada, 2 horas"], ["Día 12", "Entrevista con el equipo"], ["Día 18", "Correo con feedback y respuesta negativa"]] },
+  { company: "Financiera Pacífico Sur", role: "Ejecutivo comercial", difficulty: "Fácil", outcome: "bad", outcomeText: "Sin respuesta",
+    steps: [["Día 0", "Postulación por portal"], ["Día 5", "Entrevista grupal"], ["Día 9", "Entrevista con gerencia"], ["Día 16", "Correo de seguimiento enviado"], ["Día 45+", "Sin respuesta", true]] },
+  { company: "Salmones del Fiordo", role: "Técnico de planta", difficulty: "Media", outcome: "warn", outcomeText: "Respondió en 22 días",
+    steps: [["Día 0", "Postulación presencial"], ["Día 6", "Evaluación psicolaboral"], ["Día 10", "Entrevista con jefatura"], ["Día 32", "Llamada con oferta"]] },
+  { company: "Logística Andes Norte", role: "Analista de rutas", difficulty: "Difícil", outcome: "ok", outcomeText: "Respondió en 4 días",
+    steps: [["Día 0", "Postulación"], ["Día 2", "Acuso de recibo automático"], ["Día 7", "Caso práctico"], ["Día 11", "Entrevista final"], ["Día 15", "Llamada explicando el resultado"]] }
+];
+
+/* ---------- Utilidades ---------- */
+const $ = (sel) => document.querySelector(sel);
+const clp = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+
+/* Escapa texto antes de insertarlo como HTML para evitar XSS con datos ingresados por el usuario. */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* Clasifica un Indice de Respuesta en el semaforo de tres niveles. */
+function irLevel(ir) {
+  if (ir >= 80) return { cls: "ok", label: "Responde", color: "var(--ok)" };
+  if (ir >= 50) return { cls: "warn", label: "Irregular", color: "var(--warn)" };
+  return { cls: "bad", label: "Deja en visto", color: "var(--bad)" };
+}
+
+function showToast(text) {
+  const t = $("#toast");
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(showToast._id);
+  showToast._id = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+/* Acceso a localStorage protegido: puede fallar en ventanas privadas o con el almacenamiento bloqueado. */
+const store = {
+  get(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } },
+  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* Sin almacenamiento la app sigue funcionando en memoria. */ } }
+};
+
+/* =====================================================================
+   Navegacion por hash: cada seccion tiene un token simple (#sueldos).
+   ===================================================================== */
+const VIEWS = ["inicio", "empresas", "sueldos", "entrevistas", "postulaciones", "compromiso", "legal"];
+
+function showView(name) {
+  if (!VIEWS.includes(name)) name = "inicio";
+  document.querySelectorAll("[data-view]").forEach((s) => { s.hidden = s.dataset.view !== name; });
+  document.querySelectorAll(".nav a").forEach((a) => {
+    if (a.getAttribute("href") === "#" + name) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
+  });
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
+
+/* =====================================================================
+   Empresas: filtro, orden y tarjeta con anillo del Indice de Respuesta.
+   ===================================================================== */
+function ring(ir) {
+  // Anillo SVG: la longitud del arco es proporcional al porcentaje (circunferencia = 2*pi*30).
+  const lvl = irLevel(ir);
+  const c = 2 * Math.PI * 30;
+  return `<svg class="ir-ring" viewBox="0 0 76 76" role="img" aria-label="Índice de Respuesta ${ir} por ciento">
+    <circle cx="38" cy="38" r="30" fill="none" stroke="var(--line)" stroke-width="7"/>
+    <circle cx="38" cy="38" r="30" fill="none" stroke="${lvl.color}" stroke-width="7" stroke-linecap="round"
+      stroke-dasharray="${(c * ir / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/>
+    <text x="38" y="43" text-anchor="middle" font-size="15" fill="var(--ink)">${ir}%</text>
+  </svg>`;
+}
+
+function starStr(n) { return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n); }
+
+function renderCompanies() {
+  const q = $("#coQ").value.trim().toLowerCase();
+  const region = $("#coRegion").value;
+  const sort = $("#coSort").value;
+  const list = COMPANIES
+    .filter((c) => (!region || c.region === region) && (!q || (c.name + " " + c.industry + " " + c.region).toLowerCase().includes(q)))
+    .sort((a, b) => b[sort] - a[sort]);
+
+  if (!list.length) {
+    $("#coList").innerHTML = `<div class="card empty">No encontramos empresas con ese criterio. Prueba con otra región o palabra.</div>`;
+    return;
+  }
+
+  $("#coList").innerHTML = list.map((c) => {
+    const lvl = irLevel(c.ir);
+    const initials = c.name.split(" ").filter((w) => w.length > 2).slice(0, 2).map((w) => w[0]).join("");
+    return `<article class="card">
+      <div class="company">
+        <div class="mono-logo" style="background:${c.color}" aria-hidden="true">${initials}</div>
+        <div style="min-width:0">
+          <h3>${esc(c.name)}</h3>
+          <p class="small">${esc(c.industry)} · Región ${esc(c.region)}</p>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">
+            <span class="pill ${lvl.cls}">${lvl.label}</span>
+            ${c.pledge ? `<span class="pill info">Firmó el Compromiso SinVisto</span>` : ""}
+          </div>
+          <div class="metrics">
+            <div class="metric"><b>${c.rating.toFixed(1)}</b><span>Calificación de 5</span></div>
+            <div class="metric"><b>${c.medianDays ? c.medianDays + " días" : "Sin dato"}</b><span>Mediana de respuesta</span></div>
+            <div class="metric"><b>${c.feedback}%</b><span>Recibe feedback</span></div>
+            <div class="metric"><b>${c.reviews}</b><span>Reseñas</span></div>
+          </div>
+        </div>
+        ${ring(c.ir)}
+      </div>
+      <div class="review">
+        <p><span class="stars" aria-label="${c.review.stars} de 5 estrellas">${starStr(c.review.stars)}</span> <b>${esc(c.review.title)}</b></p>
+        <q style="margin-top:.3rem">${esc(c.review.body)}</q>
+        <p class="small" style="margin-top:.3rem">${esc(c.review.role)} · reseña verificada</p>
+        ${c.reply ? `<div class="reply"><b>Respuesta de la empresa:</b> ${esc(c.reply)}</div>` : `<p class="small" style="margin-top:.5rem">La empresa no ha usado su derecho a réplica.</p>`}
+      </div>
+    </article>`;
+  }).join("");
+}
+
+/* =====================================================================
+   Calculadora de sueldo liquido.
+   Impuesto Unico de Segunda Categoria: tabla mensual expresada en UTM.
+   Cada tramo: [limite superior, tasa, cantidad a rebajar en UTM].
+   impuesto = base * tasa - rebaja * UTM
+   ===================================================================== */
+const TRAMOS = [
+  [13.5, 0, 0], [30, 0.04, 0.54], [50, 0.08, 1.74], [70, 0.135, 4.49],
+  [90, 0.23, 11.14], [120, 0.304, 17.80], [310, 0.35, 23.32], [Infinity, 0.40, 38.82]
+];
+
+function impuestoUnico(base, utm) {
+  const enUtm = base / utm;
+  const tramo = TRAMOS.find(([lim]) => enUtm <= lim);
+  return Math.max(0, base * tramo[1] - tramo[2] * utm);
+}
+
+function calcular() {
+  const bruto = Math.max(0, Number($("#cBruto").value) || 0);
+  const afp = bruto * (Number($("#cAfp").value) || 0) / 100;
+  const salud = bruto * (Number($("#cSalud").value) || 0) / 100;
+  const ces = bruto * Number($("#cContrato").value) / 100;
+  const utm = Math.max(1, Number($("#cUtm").value) || 1);
+  // La base tributable descuenta las cotizaciones previsionales antes de aplicar la tabla.
+  const base = bruto - afp - salud - ces;
+  const imp = impuestoUnico(base, utm);
+  const liquido = base - imp;
+
+  const rows = [["Sueldo bruto", bruto], ["AFP", -afp], ["Salud", -salud], ["Seguro de cesantía", -ces], ["Impuesto único", -imp]];
+  $("#calcTable").innerHTML = rows.map(([k, v]) => `<tr><td>${k}</td><td>${v < 0 ? "−" : ""}${clp.format(Math.abs(v))}</td></tr>`).join("")
+    + `<tr class="total"><td>Sueldo líquido</td><td>${clp.format(liquido)}</td></tr>`;
+
+  const pct = (v) => bruto ? (v / bruto * 100).toFixed(2) + "%" : "0%";
+  $("#calcBar").innerHTML = [[liquido, "var(--ok)"], [afp, "var(--accent)"], [salud, "var(--warn)"], [ces, "var(--muted)"], [imp, "var(--bad)"]]
+    .map(([v, col]) => `<span style="width:${pct(v)};background:${col}"></span>`).join("");
+}
+
+function renderSalaries() {
+  const q = $("#salQ").value.trim().toLowerCase();
+  const rows = SALARIES.filter((s) => s.role.toLowerCase().includes(q));
+  $("#salBody").innerHTML = rows.length
+    ? rows.map((s) => `<tr><td>${s.role}</td><td class="num">${clp.format(s.p25)}</td><td class="num"><b>${clp.format(s.p50)}</b></td><td class="num">${clp.format(s.p75)}</td><td class="num">${s.n}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="empty">Aún no hay reportes para ese cargo.</td></tr>`;
+}
+
+/* ---------- Entrevistas ---------- */
+function renderInterviews() {
+  $("#ivList").innerHTML = INTERVIEWS.map((iv) => `<article class="card">
+    <div style="display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;align-items:start">
+      <div><h3>${iv.role}</h3><p class="small">${iv.company} · Dificultad ${iv.difficulty.toLowerCase()}</p></div>
+      <span class="pill ${iv.outcome}">${iv.outcomeText}</span>
+    </div>
+    <ol class="timeline">${iv.steps.map(([d, t, silence]) => `<li class="${silence ? "silence" : ""}"><span>${d}</span><span>${t}</span></li>`).join("")}</ol>
+  </article>`).join("");
+}
+
+/* =====================================================================
+   Mis postulaciones: cuenta dias habiles (lunes a viernes) desde la
+   ultima entrevista. Dia 7: sugerir seguimiento. Dia 10: plazo vencido.
+   ===================================================================== */
+const TR_KEY = "sinvisto.postulaciones.v1";
+
+function businessDaysSince(isoDate) {
+  const start = new Date(isoDate + "T00:00:00");
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let days = 0;
+  for (let d = new Date(start); d < today; d.setDate(d.getDate() + 1)) {
+    const next = new Date(d); next.setDate(next.getDate() + 1);
+    const wd = next.getDay();
+    if (wd !== 0 && wd !== 6) days++;
+  }
+  return days;
+}
+
+/* Fecha ISO de N dias corridos atras, usada para crear los ejemplos iniciales. */
+function daysAgo(n) {
+  const d = new Date(); d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+let apps = store.get(TR_KEY, null);
+if (!Array.isArray(apps)) {
+  apps = [
+    { id: 1, co: "Financiera Pacífico Sur", role: "Ejecutivo comercial", date: daysAgo(18), stage: "Entrevista final", status: "open", example: true },
+    { id: 2, co: "Puerto Digital Valparaíso", role: "Desarrolladora backend", date: daysAgo(10), stage: "Entrevista técnica", status: "open", example: true },
+    { id: 3, co: "Logística Andes Norte", role: "Analista de rutas", date: daysAgo(3), stage: "Entrevista RR.HH.", status: "open", example: true }
+  ];
+}
+
+function appState(a) {
+  if (a.status === "answered") return { cls: "ok", label: "Respondieron" };
+  if (a.status === "ghosted") return { cls: "bad", label: "Reportado sin respuesta" };
+  const d = businessDaysSince(a.date);
+  if (d >= 10) return { cls: "bad", label: "Plazo vencido" };
+  if (d >= 7) return { cls: "warn", label: "Haz seguimiento" };
+  return { cls: "info", label: "Dentro del plazo" };
+}
+
+function renderApps() {
+  if (!apps.length) {
+    $("#trList").innerHTML = `<div class="card empty">Aún no registras postulaciones. Agrega la primera con el formulario de arriba.</div>`;
+    return;
+  }
+  $("#trList").innerHTML = apps.map((a) => {
+    const st = appState(a);
+    const d = businessDaysSince(a.date);
+    const open = a.status === "open";
+    return `<div class="card app">
+      <div style="min-width:0"><b>${esc(a.co)}</b>${a.example ? ` <span class="sample-tag">ejemplo</span>` : ""}<p class="small">${esc(a.role)} · ${esc(a.stage)}</p></div>
+      <div><span class="days">${d}</span> <span class="small">días hábiles</span></div>
+      <div><span class="pill ${st.cls}">${st.label}</span></div>
+      <div class="app-actions">
+        ${open ? `<button class="btn sm ghost" data-act="msg" data-id="${a.id}" type="button">Seguimiento</button>
+        <button class="btn sm ghost" data-act="answered" data-id="${a.id}" type="button">Respondieron</button>
+        ${d >= 10 ? `<button class="btn sm" data-act="ghosted" data-id="${a.id}" type="button">Reportar silencio</button>` : ""}` : ""}
+        <button class="btn sm ghost" data-act="del" data-id="${a.id}" type="button" aria-label="Eliminar postulación">Eliminar</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function followUpMessage(a) {
+  return `Estimado equipo de ${a.co}:
+
+Junto con saludar, les escribo para consultar por el estado del proceso de selección para el cargo de ${a.role}. Mi última instancia fue la ${a.stage.toLowerCase()}, el ${new Date(a.date + "T00:00:00").toLocaleDateString("es-CL")}.
+
+Sigo muy interesado/a en la posición. Cualquiera sea el resultado, les agradecería mucho una respuesta para poder organizar mis otros procesos.
+
+Quedo atento/a. Saludos cordiales.`;
+}
+
+$("#trList").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const a = apps.find((x) => x.id === Number(btn.dataset.id));
+  if (!a) return;
+  const act = btn.dataset.act;
+  if (act === "msg") {
+    $("#msgText").value = followUpMessage(a);
+    $("#msgBox").hidden = false;
+    $("#msgText").focus();
+    return;
+  }
+  if (act === "answered") { a.status = "answered"; showToast("Marcada como respondida. Suma al índice de la empresa."); }
+  if (act === "ghosted") { a.status = "ghosted"; showToast("Reporte registrado. Se publica en forma anónima y agregada."); }
+  if (act === "del") { apps = apps.filter((x) => x !== a); showToast("Postulación eliminada."); }
+  store.set(TR_KEY, apps);
+  renderApps();
+});
+
+$("#trForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  apps.unshift({
+    id: Date.now(), co: $("#trCo").value.trim(), role: $("#trRole").value.trim(),
+    date: $("#trDate").value, stage: $("#trStage").value, status: "open"
+  });
+  store.set(TR_KEY, apps);
+  e.target.reset();
+  $("#trDate").value = daysAgo(0);
+  renderApps();
+  showToast("Postulación agregada.");
+});
+
+$("#copyMsg").addEventListener("click", () => {
+  const ta = $("#msgText");
+  // El portapapeles puede estar bloqueado; en ese caso se deja el texto seleccionado para copiarlo a mano.
+  navigator.clipboard.writeText(ta.value)
+    .then(() => showToast("Mensaje copiado."))
+    .catch(() => { ta.select(); showToast("Texto seleccionado. Cópialo con Ctrl+C."); });
+});
+
+/* =====================================================================
+   Validacion de RUT chileno con el algoritmo modulo 11.
+   El digito verificador se calcula multiplicando los digitos de derecha
+   a izquierda por la serie 2,3,4,5,6,7 y aplicando 11 - (suma % 11).
+   ===================================================================== */
+function validarRut(rut) {
+  const limpio = rut.replace(/[.\s-]/g, "").toUpperCase();
+  if (!/^\d{7,8}[0-9K]$/.test(limpio)) return false;
+  const cuerpo = limpio.slice(0, -1);
+  const dv = limpio.slice(-1);
+  let suma = 0, mult = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo[i]) * mult;
+    mult = mult === 7 ? 2 : mult + 1;
+  }
+  const res = 11 - (suma % 11);
+  const esperado = res === 11 ? "0" : res === 10 ? "K" : String(res);
+  return dv === esperado;
+}
+
+$("#pledgeForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const msg = $("#pledgeMsg");
+  if (!validarRut($("#pRut").value)) {
+    msg.textContent = "El RUT no es válido. Revisa el dígito verificador, por ejemplo 76.086.428-5.";
+    msg.style.color = "var(--bad)";
+    return;
+  }
+  msg.textContent = "RUT válido. En la versión final se verifica la razón social con el SII y se envía el acuerdo para firma.";
+  msg.style.color = "var(--ok)";
+});
+
+/* ---------- Busqueda de la portada: lleva a Empresas con el texto aplicado ---------- */
+$("#heroSearch").addEventListener("submit", (e) => {
+  e.preventDefault();
+  $("#coQ").value = $("#heroQ").value;
+  location.hash = "empresas";
+  renderCompanies();
+});
+
+/* ---------- Tema claro/oscuro manual ---------- */
+$("#themeBtn").addEventListener("click", () => {
+  const root = document.documentElement;
+  const isDark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = isDark ? "light" : "dark";
+});
+
+/* ---------- Arranque ---------- */
+[...new Set(COMPANIES.map((c) => c.region))].sort().forEach((r) => $("#coRegion").insertAdjacentHTML("beforeend", `<option value="${r}">${r}</option>`));
+["#coQ", "#coSort", "#coRegion"].forEach((s) => $(s).addEventListener("input", renderCompanies));
+$("#calcForm").addEventListener("input", calcular);
+$("#salQ").addEventListener("input", renderSalaries);
+$("#trDate").value = daysAgo(0);
+
+renderCompanies();
+calcular();
+renderSalaries();
+renderInterviews();
+renderApps();
+showView(location.hash.slice(1));
+</script>
+</body>
+</html>
