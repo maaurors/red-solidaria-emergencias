@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
 <title>SinVisto Chile</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Plataforma chilena de transparencia laboral: reseñas, sueldos líquidos, entrevistas y el Índice de Respuesta para terminar con el ghosting.">
@@ -36,24 +37,11 @@
   --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
+  /* Identidad de un solo tema: siempre claro, sin importar el modo del dispositivo. */
+  color-scheme: light;
+
   --r: 10px;
   --wrap: 72rem;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0E1322; --surface: #161D31; --ink: #E7EAF2; --muted: #9AA3BA; --line: #29324A;
-    --hero: #131B30; --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
-    --ok: #5CCB93; --ok-soft: #12321F; --warn: #E8B455; --warn-soft: #3A2B0C;
-    --bad: #F2867E; --bad-soft: #3D1614; --check-grey: #6C7690;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0E1322; --surface: #161D31; --ink: #E7EAF2; --muted: #9AA3BA; --line: #29324A;
-  --hero: #131B30; --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
-  --ok: #5CCB93; --ok-soft: #12321F; --warn: #E8B455; --warn-soft: #3A2B0C;
-  --bad: #F2867E; --bad-soft: #3D1614; --check-grey: #6C7690;
-  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -95,7 +83,6 @@ a { color: var(--accent); }
 }
 .nav a:hover { opacity: 1; background: var(--accent-soft); }
 .nav a[aria-current="page"] { opacity: 1; background: var(--accent); color: #fff; }
-.theme-btn { background: transparent; border: 1px solid var(--line); color: var(--brand-ink); border-radius: 999px; padding: .3rem .75rem; font: inherit; font-size: .85rem; cursor: pointer; }
 
 /* ---------- Vistas ---------- */
 main > section { padding-block: 2.5rem 4rem; }
@@ -269,8 +256,7 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
   .collage { max-width: 560px; }
   /* Menu en una sola fila desplazable bajo el logo, en vez de ocupar media pantalla. */
   .topbar .wrap { gap: .5rem 1rem; padding-block: .6rem .5rem; }
-  .theme-btn { margin-left: auto; }
-  .nav { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -.25rem; }
+    .nav { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -.25rem; }
   .nav::-webkit-scrollbar { display: none; }
   .nav a { white-space: nowrap; }
 }
@@ -304,7 +290,6 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
       <a href="#compromiso">Para empresas</a>
       <a href="#legal">Leyes y políticas</a>
     </nav>
-    <button class="theme-btn" id="themeBtn" type="button">Cambiar tema</button>
   </div>
 </header>
 
@@ -977,13 +962,6 @@ $("#heroSearch").addEventListener("submit", (e) => {
   $("#coQ").value = $("#heroQ").value;
   location.hash = "empresas";
   renderCompanies();
-});
-
-/* ---------- Tema claro/oscuro manual ---------- */
-$("#themeBtn").addEventListener("click", () => {
-  const root = document.documentElement;
-  const isDark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-  root.dataset.theme = isDark ? "light" : "dark";
 });
 
 /* ---------- Arranque ---------- */
