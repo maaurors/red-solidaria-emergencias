@@ -209,9 +209,17 @@ main > section { padding-block: 2.5rem 4rem; }
 /* ---------- Mis postulaciones ---------- */
 .tracker-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: .75rem; align-items: end; }
 .app-list { display: grid; gap: .6rem; margin-top: 1.25rem; }
-.app { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 1rem; align-items: center; }
+/* Columnas centrales de ancho fijo para que dias y estado queden alineados entre todas las filas. */
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem 11rem 29rem; gap: 1rem; align-items: center; }
 .app .days { font-family: var(--f-mono); font-size: 1.3rem; font-weight: 600; }
-.app-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+.app-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+/* Accion destructiva y poco frecuente: se muestra como texto discreto para no competir con las principales. */
+.btn.link { background: transparent; color: var(--muted); padding-inline: .5rem; font-weight: 400; text-decoration: underline; }
+.btn.link:hover { color: var(--bad); filter: none; }
+@media (max-width: 1100px) {
+  .app { grid-template-columns: minmax(0, 1fr) 8.5rem 11rem; }
+  .app-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
 .msg-box { margin-top: 1rem; }
 .msg-box textarea { width: 100%; min-height: 9rem; font: inherit; padding: .8rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .toast { position: fixed; left: 50%; bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: .6rem 1rem; border-radius: 8px; font-size: .9rem; z-index: 20; }
@@ -220,7 +228,8 @@ main > section { padding-block: 2.5rem 4rem; }
 .pledge-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .8rem; }
 .pledge-list li { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid var(--line); }
 .pledge-list li b.mono { color: var(--accent); font-size: 1.05rem; }
-.law { display: grid; gap: .35rem; }
+/* align-content: start evita que la grilla reparta el alto sobrante entre filas y desalinee los titulos. */
+.law { display: grid; gap: .35rem; align-content: start; }
 .law .eyebrow { color: var(--accent); }
 details.card summary { cursor: pointer; font-weight: 700; font-family: var(--f-display); font-size: 1.05rem; }
 details.card[open] summary { margin-bottom: .6rem; }
@@ -235,8 +244,14 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
   .how { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tracker-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .app-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .app > div:first-child { grid-column: 1 / -1; }
   .hero-art { max-width: 420px; }
+  /* Menu en una sola fila desplazable bajo el logo, en vez de ocupar media pantalla. */
+  .topbar .wrap { gap: .5rem 1rem; padding-block: .6rem .5rem; }
+  .theme-btn { margin-left: auto; }
+  .nav { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -.25rem; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a { white-space: nowrap; }
 }
 @media (max-width: 600px) {
   .g2, .how, .row2, .tracker-form, .ir-scale { grid-template-columns: minmax(0, 1fr); }
@@ -855,7 +870,7 @@ function renderApps() {
         ${open ? `<button class="btn sm ghost" data-act="msg" data-id="${a.id}" type="button">Seguimiento</button>
         <button class="btn sm ghost" data-act="answered" data-id="${a.id}" type="button">Respondieron</button>
         ${d >= 10 ? `<button class="btn sm" data-act="ghosted" data-id="${a.id}" type="button">Reportar silencio</button>` : ""}` : ""}
-        <button class="btn sm ghost" data-act="del" data-id="${a.id}" type="button" aria-label="Eliminar postulación">Eliminar</button>
+        <button class="btn sm link" data-act="del" data-id="${a.id}" type="button" aria-label="Eliminar postulación">Eliminar</button>
       </div>
     </div>`;
   }).join("");

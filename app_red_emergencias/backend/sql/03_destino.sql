@@ -1,1 +1,0 @@
-USE red_emergencias; ALTER TABLE donacion ADD COLUMN id_albergue_destino INT NULL; ALTER TABLE donacion ADD CONSTRAINT fk_donacion_destino FOREIGN KEY (id_albergue_destino) REFERENCES albergue(id_albergue);
