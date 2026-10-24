@@ -1,0 +1,5 @@
+# Politica de divulgacion responsable de SinVisto (RFC 9116).
+Contact: https://github.com/maaurors/red-solidaria-emergencias/security/advisories/new
+Expires: 2027-10-24T00:00:00.000Z
+Preferred-Languages: es, en
+Policy: https://github.com/maaurors/red-solidaria-emergencias/blob/main/SECURITY.md
