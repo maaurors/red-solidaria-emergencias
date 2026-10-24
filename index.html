@@ -12,14 +12,15 @@
 <style>
 /* Layout: barra superior fija con navegacion por secciones; cada seccion es una vista (hash) en una sola columna de 72rem con grillas que se apilan en movil. */
 :root {
-  /* Paleta: azul cordillera (fondo oscuro de marca), papel frio (fondo), cobalto "doble check" (acento), tres semanticos para el semaforo de respuesta. */
-  --bg: #F2F4F7;
+  /* Paleta clara: papel frio (fondo), blanco (barra y tarjetas), cielo palido (portada), cobalto "doble check" (acento), tres semanticos para el semaforo de respuesta. */
+  --bg: #F7F9FC;
   --surface: #FFFFFF;
   --ink: #141B2D;
   --muted: #56607A;
-  --line: #D9DEE8;
-  --brand: #18233F;
-  --brand-ink: #F2F4F7;
+  --line: #DFE4EE;
+  --brand: #FFFFFF;
+  --brand-ink: #141B2D;
+  --hero: #EAF1FC;
   --accent: #2B54E0;
   --accent-soft: #E3E9FC;
   --ok: #1D7A4E;
@@ -41,7 +42,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0E1322; --surface: #161D31; --ink: #E7EAF2; --muted: #9AA3BA; --line: #29324A;
-    --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
+    --hero: #131B30; --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
     --ok: #5CCB93; --ok-soft: #12321F; --warn: #E8B455; --warn-soft: #3A2B0C;
     --bad: #F2867E; --bad-soft: #3D1614; --check-grey: #6C7690;
     color-scheme: dark;
@@ -49,7 +50,7 @@
 }
 :root[data-theme="dark"] {
   --bg: #0E1322; --surface: #161D31; --ink: #E7EAF2; --muted: #9AA3BA; --line: #29324A;
-  --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
+  --hero: #131B30; --brand: #0A0F1C; --brand-ink: #E7EAF2; --accent: #7F9CFF; --accent-soft: #1E2A52;
   --ok: #5CCB93; --ok-soft: #12321F; --warn: #E8B455; --warn-soft: #3A2B0C;
   --bad: #F2867E; --bad-soft: #3D1614; --check-grey: #6C7690;
   color-scheme: dark;
@@ -83,7 +84,7 @@ a { color: var(--accent); }
 }
 
 /* ---------- Barra de navegacion ---------- */
-.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--brand); color: var(--brand-ink); }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--brand); color: var(--brand-ink); border-bottom: 1px solid var(--line); }
 .topbar .wrap { display: flex; align-items: center; gap: 1.25rem; padding-block: .7rem; flex-wrap: wrap; }
 .logo { display: flex; align-items: center; gap: .5rem; font-family: var(--f-display); font-weight: 800; font-size: 1.3rem; color: var(--brand-ink); text-decoration: none; }
 .logo svg { width: 30px; height: 30px; }
@@ -92,18 +93,17 @@ a { color: var(--accent); }
   color: var(--brand-ink); opacity: .78; text-decoration: none; font-size: .92rem;
   padding: .35rem .7rem; border-radius: 999px;
 }
-.nav a:hover { opacity: 1; background: rgba(255,255,255,.08); }
+.nav a:hover { opacity: 1; background: var(--accent-soft); }
 .nav a[aria-current="page"] { opacity: 1; background: var(--accent); color: #fff; }
-.theme-btn { background: transparent; border: 1px solid rgba(255,255,255,.25); color: var(--brand-ink); border-radius: 999px; padding: .3rem .75rem; font: inherit; font-size: .85rem; cursor: pointer; }
+.theme-btn { background: transparent; border: 1px solid var(--line); color: var(--brand-ink); border-radius: 999px; padding: .3rem .75rem; font: inherit; font-size: .85rem; cursor: pointer; }
 
 /* ---------- Vistas ---------- */
 main > section { padding-block: 2.5rem 4rem; }
 .view-head { display: grid; gap: .6rem; margin-bottom: 2rem; }
 
 /* ---------- Hero ---------- */
-.hero { background: var(--brand); color: var(--brand-ink); }
-.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 2.5rem; align-items: center; padding-block: 3rem 3.5rem; }
-.hero .lead { color: var(--brand-ink); opacity: .82; }
+.hero { background: var(--hero); color: var(--ink); }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 2.5rem; align-items: center; padding-block: 3rem 3.5rem; }
 .hero h1 em { font-style: normal; color: var(--accent); }
 .search {
   display: flex; gap: .5rem; margin-top: 1.6rem; background: var(--surface); padding: .4rem; border-radius: 14px;
@@ -123,8 +123,29 @@ main > section { padding-block: 2.5rem 4rem; }
 .hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 2rem; }
 .hero-stats div { display: grid; }
 .hero-stats b { font-family: var(--f-mono); font-size: 1.6rem; }
-.hero-stats span { font-size: .82rem; opacity: .75; }
-.hero-art { width: 100%; max-width: 100%; height: auto; }
+.hero-stats span { font-size: .82rem; color: var(--muted); }
+
+/* Collage de fotos reales: una grande arriba y dos abajo. Cada foto lleva una etiqueta con la forma de un aviso de chat. */
+.collage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; max-width: 100%; }
+.ph { position: relative; margin: 0; min-width: 0; }
+.ph img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.ph-a { grid-column: 1 / -1; aspect-ratio: 16 / 10; }
+.ph-a img { object-position: 60% 35%; }
+.ph-b, .ph-c { aspect-ratio: 4 / 3; }
+.chip {
+  position: absolute; left: 12px; bottom: 12px; max-width: calc(100% - 24px);
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  padding: .35rem .7rem; border-radius: 999px; font-size: .8rem; line-height: 1.3;
+  box-shadow: 0 2px 8px rgba(20, 27, 45, .12);
+}
+.chip svg { width: 18px; height: 12px; flex: none; }
+.chip.bad b { color: var(--bad); font-family: var(--f-mono); white-space: nowrap; }
+@media (max-width: 600px) {
+  /* En pantallas angostas la etiqueta se achica y se pega al borde para no tapar la cara de la persona. */
+  .chip { font-size: .7rem; left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: .25rem .55rem; }
+}
+.photo-credit { font-size: .72rem; color: var(--muted); margin-top: .5rem; }
 
 /* ---------- Bloques generales ---------- */
 .grid { display: grid; gap: 1rem; }
@@ -245,7 +266,7 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
   .tracker-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .app > div:first-child { grid-column: 1 / -1; }
-  .hero-art { max-width: 420px; }
+  .collage { max-width: 560px; }
   /* Menu en una sola fila desplazable bajo el logo, en vez de ocupar media pantalla. */
   .topbar .wrap { gap: .5rem 1rem; padding-block: .6rem .5rem; }
   .theme-btn { margin-left: auto; }
@@ -259,10 +280,6 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
   .company .ir-ring { grid-column: 1 / -1; }
   .pledge-list li, .timeline li { grid-template-columns: minmax(0, 1fr); gap: .2rem; }
   .search { flex-direction: column; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .hero-art .check2 { animation: turnBlue 2.4s ease-in-out .6s both; }
-  @keyframes turnBlue { from { stroke: var(--check-grey); } to { stroke: var(--accent); } }
 }
 </style>
 </head>
@@ -298,7 +315,7 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
   <div class="hero">
     <div class="wrap">
       <div>
-        <p class="eyebrow" style="color:var(--brand-ink);opacity:.7">Transparencia laboral hecha en Chile</p>
+        <p class="eyebrow">Transparencia laboral hecha en Chile</p>
         <h1 style="margin-top:.6rem">Postulaste. Te entrevistaron. <em>Y te dejaron en visto.</em></h1>
         <p class="lead" style="margin-top:1rem">En SinVisto las empresas se miden por algo que ninguna otra plataforma mide: si le responden a la gente. Reseñas, sueldos líquidos reales y el Índice de Respuesta de cada empleador en Chile.</p>
         <form class="search" id="heroSearch" role="search">
@@ -311,34 +328,29 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
           <div><b>10</b><span>días hábiles: plazo del<br>Compromiso SinVisto</span></div>
           <div><b>$0</b><span>costo para leer todo.<br>Sin muro de contenido.</span></div>
         </div>
-        <p class="small" style="color:var(--brand-ink);opacity:.55;margin-top:.8rem">*Cifra ilustrativa del prototipo. Se reemplaza por datos reales al lanzar.</p>
+        <p class="small" style="margin-top:.8rem">*Cifra ilustrativa del prototipo. Se reemplaza por datos reales al lanzar.</p>
       </div>
-      <!-- Ilustracion principal: telefono con un chat de postulacion. El segundo check pasa de gris a azul: la empresa respondio. Al fondo, la cordillera. -->
-      <svg class="hero-art" viewBox="0 0 420 400" role="img" aria-label="Ilustración de un teléfono con un mensaje de postulación respondido, con la cordillera de los Andes de fondo">
-        <path d="M0 330 L60 250 L95 285 L150 190 L200 260 L240 215 L300 300 L345 230 L420 320 L420 400 L0 400 Z" fill="var(--accent)" opacity=".18"/>
-        <path d="M150 190 L170 218 L160 222 L150 208 L140 222 L132 216 Z" fill="var(--brand-ink)" opacity=".35"/>
-        <path d="M345 230 L360 252 L350 254 L345 246 L338 254 L332 250 Z" fill="var(--brand-ink)" opacity=".35"/>
-        <rect x="110" y="30" width="200" height="340" rx="28" fill="var(--surface)" stroke="var(--line)" stroke-width="2"/>
-        <rect x="185" y="44" width="50" height="7" rx="3.5" fill="var(--line)"/>
-        <rect x="126" y="66" width="168" height="36" rx="8" fill="var(--accent-soft)"/>
-        <circle cx="146" cy="84" r="10" fill="var(--accent)"/>
-        <rect x="164" y="76" width="80" height="7" rx="3.5" fill="var(--ink)" opacity=".7"/>
-        <rect x="164" y="88" width="50" height="6" rx="3" fill="var(--muted)" opacity=".6"/>
-        <rect x="150" y="120" width="140" height="62" rx="12" fill="var(--accent)" opacity=".9"/>
-        <rect x="162" y="134" width="110" height="6" rx="3" fill="#fff" opacity=".9"/>
-        <rect x="162" y="146" width="92" height="6" rx="3" fill="#fff" opacity=".9"/>
-        <path d="M244 168l5 5 9-9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M253 171l2 2 9-9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="126" y="200" width="150" height="88" rx="12" fill="var(--bg)" stroke="var(--line)"/>
-        <rect x="138" y="214" width="120" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
-        <rect x="138" y="226" width="104" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
-        <rect x="138" y="238" width="116" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
-        <rect x="138" y="250" width="70" height="6" rx="3" fill="var(--ink)" opacity=".7"/>
-        <path d="M232 274l5 5 9-9" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <path class="check2" d="M241 277l2 2 9-9" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="126" y="306" width="168" height="38" rx="19" fill="var(--ok-soft)"/>
-        <text x="210" y="330" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600" fill="var(--ok)">Respondió en 4 días</text>
-      </svg>
+      <!-- Collage de fotografias reales (licencia CC BY 2.0, creditos en el pie). Las etiquetas imitan avisos de chat para contar el ghosting. -->
+      <div>
+        <div class="collage">
+          <figure class="ph ph-a">
+            <img src="img/espera-notebook.jpg" width="900" height="599" alt="Mujer de unos cincuenta años con la mano en la frente, frustrada frente a su notebook en la cocina">
+            <span class="chip bad"><b>Día 23</b> sin respuesta después de la entrevista final</span>
+          </figure>
+          <figure class="ph ph-b">
+            <img src="img/espera-telefono.jpg" width="900" height="600" alt="Mujer de espaldas revisando su teléfono mientras espera en el andén">
+            <span class="chip">
+              <svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6.5l3 3 6-7M7 9.5l1 0.5 6-7.5" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Visto 14:32
+            </span>
+          </figure>
+          <figure class="ph ph-c">
+            <img src="img/cansancio.jpg" width="900" height="599" alt="Mujer cubriéndose la cara con las manos frente a su computador">
+            <span class="chip">3 entrevistas, 0 respuestas</span>
+          </figure>
+        </div>
+        <p class="photo-credit">Fotos: Shixart1985 y Rawpixel Ltd, CC BY 2.0, vía Wikimedia Commons.</p>
+      </div>
     </div>
   </div>
 
@@ -591,6 +603,7 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
   <div class="wrap">
     <span>SinVisto, prototipo de plataforma de transparencia laboral para Chile.</span>
     <span>Todas las empresas, reseñas y cifras de esta versión son ficticias.</span>
+    <span>Fotografías: <a href="https://commons.wikimedia.org/wiki/File:Frustrated_woman_working_on_laptop_in_a_bright_kitchen.jpg" target="_blank" rel="noopener">Shixart1985</a>, <a href="https://commons.wikimedia.org/wiki/File:Woman_feeling_stressed_while_working_at_a_kitchen_table.jpg" target="_blank" rel="noopener">Shixart1985</a> y <a href="https://commons.wikimedia.org/wiki/File:Woman_waiting_and_playing_on_her_phone.jpg" target="_blank" rel="noopener">Rawpixel Ltd</a>, bajo licencia <a href="https://creativecommons.org/licenses/by/2.0/deed.es" target="_blank" rel="noopener">CC BY 2.0</a>.</span>
   </div>
 </footer>
 
