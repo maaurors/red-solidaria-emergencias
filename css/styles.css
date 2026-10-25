@@ -428,3 +428,16 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
 .account-note { background: var(--ok-soft); color: var(--ok); padding: .6rem .8rem; border-radius: 8px; font-size: .92rem; }
 .account-note a { color: inherit; font-weight: 700; }
 .danger-zone { border-top: 1px solid var(--line); padding-top: 1rem; }
+
+/* ---------- Que esperar (v7) ---------- */
+/* Bloque principal de la tarjeta: la expectativa en palabras simples, con un borde del color del semaforo. */
+.expect { display: grid; gap: .35rem; padding: .9rem 1rem; border-radius: 10px; border-left: 4px solid var(--line); background: var(--bg); }
+.expect.ok { border-left-color: var(--ok); }
+.expect.warn { border-left-color: var(--warn); }
+.expect.bad { border-left-color: var(--bad); }
+.expect-head { font-family: var(--f-display); font-weight: 700; font-size: 1.15rem; }
+.expect-tip { font-size: .92rem; color: var(--muted); }
+.app-expect { grid-column: 1 / -1; margin: 0; font-size: .88rem; padding: .55rem .75rem; border-radius: 8px; background: var(--bg); border-left: 3px solid var(--line); }
+.app-expect.bad { border-left-color: var(--bad); }
+.app-expect.warn { border-left-color: var(--warn); }
+.app-expect.ok { border-left-color: var(--ok); }

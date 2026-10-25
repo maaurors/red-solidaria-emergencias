@@ -426,10 +426,30 @@ function aggregate(list) {
   return [...byRut.values()].map((c) => ({ ...c, ir: c.atiempo / c.n, ghost: c.nunca / c.n, label: companyLabel(c.rut) }));
 }
 
+/* Las etiquetas describen lo que le espera a quien postula, no acusan a la empresa. */
 function irLevel(ir) {
-  if (ir >= 0.8) return { cls: "ok", label: "Responde", color: "var(--ok)" };
-  if (ir >= 0.5) return { cls: "warn", label: "Irregular", color: "var(--warn)" };
-  return { cls: "bad", label: "Deja en visto", color: "var(--bad)" };
+  if (ir >= 0.8) return { cls: "ok", label: "Suele responder", color: "var(--ok)" };
+  if (ir >= 0.5) return { cls: "warn", label: "Responde a veces", color: "var(--warn)" };
+  return { cls: "bad", label: "Rara vez responde", color: "var(--bad)" };
+}
+
+/* "Que esperar si postulas aqui": la metrica traducida a una expectativa y un consejo concreto.
+   El objetivo es dar tranquilidad: si en una empresa lo normal es no responder, no es por la persona. */
+function expectation(c) {
+  const never = c.nunca / c.n;
+  const de10 = (x) => Math.round(x * 10);
+  const top = Object.entries(c.stages).sort((a, b) => b[1] - a[1])[0];
+  // Solo la primera letra va en minuscula ("RR.HH." se conserva) y no se agrega un punto si la etapa ya termina en uno.
+  const stageText = top ? STAGES[top[0]].charAt(0).toLowerCase() + STAGES[top[0]].slice(1) : "";
+  const where = top ? ` Cuando el contacto se corta, suele ser ${stageText}${stageText.endsWith(".") ? "" : "."}` : "";
+  const late = c.tarde ? ` y ${de10(c.tarde / c.n)} recibieron respuesta, pero tarde` : "";
+  const detail = `De cada 10 personas que reportaron, ${de10(never)} nunca supieron el resultado${late}.${where}`;
+  if (never >= 0.6) return { cls: "bad", headline: "Lo más probable es que no recibas respuesta", detail,
+    tip: "No es por ti: así funciona este proceso. Si te interesa, postula, pero sigue buscando en paralelo. Si en 10 días hábiles no hay noticias, considéralo cerrado y avanza con tranquilidad." };
+  if (never >= 0.3) return { cls: "warn", headline: "Puede que te respondan, pero no es seguro", detail,
+    tip: "Envía un seguimiento cordial al día 7. Si al día 10 no hay respuesta, enfócate en tus otras postulaciones." };
+  return { cls: "ok", headline: "Lo habitual es que te respondan", detail,
+    tip: "Si pasan más de 10 días hábiles sin noticias, un correo de seguimiento suele tener respuesta." };
 }
 
 function ring(ratio) {
@@ -513,14 +533,21 @@ function companyCard(c) {
   const sub = `${c.n} ${c.n === 1 ? "reporte" : "reportes"} · ${regions} · último en ${monthLabel(c.lastMonth)}`;
   if (c.n < K_ANON) {
     return html`<article class="card co-card">${companyHead(c.rut, sub, null)}
-      <p class="locked">Esta empresa tiene ${c.n} ${c.n === 1 ? "reporte" : "reportes"}. El detalle se publica desde ${K_ANON}, para que nadie pueda saber quién reportó.</p>
+      <p class="locked">Aún no sabemos qué esperar de esta empresa: tiene ${c.n} ${c.n === 1 ? "reporte" : "reportes"}. El detalle se publica desde ${K_ANON}, para que nadie pueda saber quién reportó.</p>
       <a class="btn sm ghost" href="#reportar" data-report-rut="${c.rut}">¿Te pasó con esta empresa? Reporta</a>
     </article>`;
   }
   const lvl = irLevel(c.ir);
+  const exp = expectation(c);
   // Los comentarios se muestran sin asociarlos a la etapa, region ni mes de su reporte, para no identificar a nadie.
   const quotes = c.comments.slice(0, 3);
   return html`<article class="card co-card">${companyHead(c.rut, sub, c.ir)}
+    <div class="expect ${exp.cls}">
+      <p class="eyebrow">Qué esperar si postulas aquí</p>
+      <p class="expect-head">${exp.headline}</p>
+      <p>${exp.detail}</p>
+      <p class="expect-tip">${exp.tip}</p>
+    </div>
     <div class="chips-row">
       <span class="pill ${lvl.cls}">${lvl.label}</span>
       ${c.n < PRELIMINAR ? html`<span class="pill info">Preliminar: menos de ${PRELIMINAR} reportes</span>` : ""}
@@ -614,6 +641,7 @@ function renderAll() {
   renderStats();
   renderCompanies();
   renderMine();
+  renderApps();
 }
 
 /* =====================================================================
@@ -1005,6 +1033,13 @@ function renderApps() {
       <div class="minw-0"><b>${a.co}</b><p class="small">${a.role} · ${STAGES[a.stage].replace("Después de ", "")}</p></div>
       <div><span class="days">${d}</span> <span class="small">días hábiles</span></div>
       <div><span class="pill ${st.cls}">${st.label}</span></div>
+      ${(() => {
+        const hit = searchCatalog(a.co, 1)[0];
+        const c = hit && companies.find((x) => x.rut === hit.rut && x.n >= K_ANON);
+        if (!c || a.status !== "open") return "";
+        const e = expectation(c);
+        return html`<p class="app-expect ${e.cls}"><b>Qué esperar de ${hit.brand || hit.name}:</b> ${e.headline.charAt(0).toLowerCase() + e.headline.slice(1)}, según ${c.n} reportes. ${e.tip}</p>`;
+      })()}
       <div class="app-actions">
         ${open ? html`<button class="btn sm ghost" data-act="msg" data-id="${a.id}" type="button">Seguimiento</button>
         <button class="btn sm ghost" data-act="answered" data-id="${a.id}" type="button">Respondieron</button>
