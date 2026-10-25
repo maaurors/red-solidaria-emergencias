@@ -6,3 +6,9 @@ Thumbs.db
 # Secretos: nunca subir credenciales del futuro backend
 .env
 *.env
+
+# Dependencias de desarrollo
+node_modules/
+
+# Registros de los emuladores de Firebase
+*-debug.log

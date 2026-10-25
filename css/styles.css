@@ -421,3 +421,10 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
 .next-step { background: var(--accent-soft); padding: .6rem .8rem; border-radius: 8px; }
 #noText { width: 100%; font: inherit; font-size: .92rem; padding: .8rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .check-row.full { grid-column: 1 / -1; }
+
+/* ---------- Cuenta (v6) ---------- */
+.account-btn { margin-left: auto; padding: .4rem .9rem; border-radius: 999px; border: 1.5px solid var(--accent); color: var(--accent); font-weight: 700; font-size: .9rem; text-decoration: none; white-space: nowrap; }
+.account-btn:hover { background: var(--accent-soft); }
+.account-note { background: var(--ok-soft); color: var(--ok); padding: .6rem .8rem; border-radius: 8px; font-size: .92rem; }
+.account-note a { color: inherit; font-weight: 700; }
+.danger-zone { border-top: 1px solid var(--line); padding-top: 1rem; }

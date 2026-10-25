@@ -1,0 +1,150 @@
+rules_version = '2';
+
+// Reglas de seguridad de SinVisto. Son la unica barrera real: el navegador esta en manos del usuario
+// y cualquier validacion hecha alla se puede saltar. Todo lo que importa se vuelve a exigir aqui.
+//
+// Modelo de datos:
+//   reports/{id}                      Reporte publico. NO contiene el uid ni el correo de quien reporta.
+//   users/{uid}/reportes/{id}         Prueba privada de propiedad del reporte {id}.
+//   users/{uid}/claims/{rut_mes}      Un reporte por empresa y mes por persona. Solo se crea una vez.
+//   users/{uid}/perfil/datos          Consentimientos aceptados (version, fecha, contacto).
+// El correo vive solo en Firebase Authentication, ya verificado: no se copia a la base de datos.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Identidad ----------
+    // Solo cuentas con correo verificado (el enlace magico verifica el correo al ingresar).
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function isMe(uid) {
+      return verified() && request.auth.uid == uid;
+    }
+    // Ruta en el espacio privado de quien hace la peticion. Cada $(...) es UN segmento de la ruta,
+    // por eso la coleccion y el id van por separado (un "a/b" dentro de un solo $() no forma dos segmentos).
+    function mine(col, id) {
+      return /databases/$(database)/documents/users/$(request.auth.uid)/$(col)/$(id);
+    }
+
+    // ---------- Validacion del reporte ----------
+    // Listas cerradas identicas a las de js/app.js. Cualquier valor fuera de ellas se rechaza.
+    function regions() {
+      return ["Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo", "Valparaíso", "Metropolitana",
+        "O'Higgins", "Maule", "Ñuble", "Biobío", "La Araucanía", "Los Ríos", "Los Lagos", "Aysén", "Magallanes"];
+    }
+    function areas() {
+      return ["Administración", "Atención a clientes", "Comercial y ventas", "Construcción", "Educación", "Finanzas y contabilidad",
+        "Ingeniería", "Logística y operaciones", "Marketing", "Minería y energía", "Recursos humanos", "Retail", "Salud", "Tecnología", "Otra área"];
+    }
+    function channels() {
+      return ["Portal de empleo", "Sitio web de la empresa", "LinkedIn", "Consultora o headhunter", "Referido", "Otro canal"];
+    }
+    function stages() {
+      return ["cv", "rrhh", "prueba", "jefatura", "final", "oferta", "examenes"];
+    }
+    function asks() {
+      return ["aviso_cv", "resultado", "plazo", "motivo", "automatico"];
+    }
+
+    // (?s) hace que '.' tambien coincida con saltos de linea: sin el, "hola\ncorreo@x.cl" pasaria el filtro.
+    // Comentario: hasta 200 caracteres, sin signos de codigo, correos, enlaces ni numeros largos (telefonos o RUT).
+    function validComment(c) {
+      return c is string && c.size() <= 200
+        && !c.matches('(?s).*[<>{}@].*')
+        && !c.matches('(?si).*(https?:|www[.]).*')
+        && !c.matches('(?s).*[0-9][0-9 .-]{5,}[0-9].*');
+    }
+
+    // Autor: seudonimo generado por la app, o un nombre que la persona autorizo publicar.
+    function validAuthor(a) {
+      return a is map && a.keys().hasOnly(["type", "alias", "name"])
+        && ((a.type == "alias" && a.keys().hasOnly(["type", "alias"]) && a.alias is string
+              && a.alias.matches('Postulante [A-Za-zÁÉÍÓÚáéíóúÑñÜü]+ [0-9]{4}'))
+          || (a.type == "name" && a.keys().hasOnly(["type", "name"]) && a.name is string
+              && a.name.size() >= 2 && a.name.size() <= 40 && !a.name.matches('(?s).*[0-9<>{}@\n].*')));
+    }
+
+    function validReport(d) {
+      return d.keys().hasAll(["rut", "region", "area", "channel", "outcome", "month", "createdAt", "asks", "author", "v"])
+        && d.keys().hasOnly(["rut", "region", "area", "channel", "outcome", "stage", "month", "createdAt", "asks", "author", "comment", "v"])
+        && d.v == 2
+        && d.rut is string && d.rut.matches('[0-9]{7,8}-[0-9K]')
+        && d.region in regions() && d.area in areas() && d.channel in channels()
+        && d.outcome in ["nunca", "tarde", "atiempo"]
+        // La etapa es obligatoria salvo que hayan respondido a tiempo.
+        && (d.outcome == "atiempo" ? (!("stage" in d) || d.stage == null) : (d.stage in stages()))
+        && d.month is string && d.month.matches('20[0-9]{2}-(0[1-9]|1[0-2])')
+        // Fecha de creacion redondeada al dia y nunca en el futuro.
+        && d.createdAt is int && d.createdAt <= request.time.toMillis() && d.createdAt % 86400000 == 0
+        && d.asks is list && d.asks.size() <= 5 && d.asks.toSet().difference(asks().toSet()).size() == 0
+        && (!("comment" in d) || validComment(d.comment))
+        && validAuthor(d.author);
+    }
+
+    // ---------- Reportes publicos ----------
+    match /reports/{id} {
+      allow read: if true;
+
+      // Crear: el lote debe crear tambien la prueba de propiedad y el "claim" de empresa y mes,
+      // y ese claim no puede existir antes. Asi se garantiza un reporte por empresa y mes por persona.
+      allow create: if verified() && validReport(request.resource.data)
+        && !exists(mine("claims", request.resource.data.rut + "_" + request.resource.data.month))
+        && existsAfter(mine("claims", request.resource.data.rut + "_" + request.resource.data.month))
+        && existsAfter(mine("reportes", id));
+
+      // Actualizar: solo quien lo creo, y solo para cambiar su nombre por un seudonimo (retirar el consentimiento).
+      allow update: if verified() && exists(mine("reportes", id))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["author"])
+        && request.resource.data.author.type == "alias" && validAuthor(request.resource.data.author);
+
+      // Borrar: solo quien lo creo (derecho de supresion).
+      allow delete: if verified() && exists(mine("reportes", id));
+    }
+
+    // ---------- Espacio privado de cada persona ----------
+    match /users/{uid} {
+      // Prueba de propiedad: se crea junto con el reporte y apunta al claim correspondiente.
+      match /reportes/{id} {
+        allow read: if isMe(uid);
+        allow create: if isMe(uid)
+          && request.resource.data.keys().hasOnly(["rut", "month", "at", "named"])
+          && request.resource.data.rut is string && request.resource.data.month is string
+          && request.resource.data.at is int && request.resource.data.named is bool
+          && existsAfter(/databases/$(database)/documents/reports/$(id));
+        allow update: if isMe(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["named"])
+          && request.resource.data.named == false;
+        // Solo se borra junto con el reporte: no se puede soltar la prueba y dejar el reporte huerfano.
+        allow delete: if isMe(uid) && !existsAfter(/databases/$(database)/documents/reports/$(id));
+      }
+
+      // Claim de empresa y mes: el id es "<rut>_<AAAA-MM>" y apunta al reporte.
+      match /claims/{claim} {
+        allow read: if isMe(uid);
+        allow create: if isMe(uid)
+          && request.resource.data.keys().hasOnly(["reportId"])
+          && request.resource.data.reportId is string
+          && existsAfter(/databases/$(database)/documents/reports/$(request.resource.data.reportId));
+        // Se libera solo si el reporte se borra en el mismo lote: asi no sirve para duplicar reportes.
+        allow delete: if isMe(uid)
+          && !existsAfter(/databases/$(database)/documents/reports/$(resource.data.reportId));
+        allow update: if false;
+      }
+
+      // Consentimientos: la persona solo puede leer y escribir los suyos.
+      match /perfil/{doc} {
+        allow read, delete: if isMe(uid);
+        allow create, update: if isMe(uid) && doc == "datos"
+          && request.resource.data.keys().hasOnly(["terms", "at", "contact"])
+          && request.resource.data.terms is string && request.resource.data.terms.size() <= 10
+          && request.resource.data.at is int && request.resource.data.contact is bool;
+      }
+    }
+
+    // Todo lo que no se permite arriba queda prohibido.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

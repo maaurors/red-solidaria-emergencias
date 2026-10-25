@@ -35,7 +35,10 @@ function html(strings, ...values) {
 
 // La politica solo deja pasar texto que ya fue construido por html``.
 const ttPolicy = window.trustedTypes && window.trustedTypes.createPolicy
-  ? window.trustedTypes.createPolicy("sinvisto", { createHTML: (s) => s })
+  ? window.trustedTypes.createPolicy("sinvisto", {
+      createHTML: (s) => s,
+      createScriptURL: (u) => { if (u === "js/vendor/firebase.js") return u; throw new TypeError("Script no permitido: " + u); }
+    })
   : null;
 
 function setHTML(el, safe) {
@@ -452,7 +455,7 @@ let mine = { email: "", items: [] };
 let canWrite = true;
 
 /* ---------- Navegacion por hash: solo tokens de la lista; cualquier otro valor cae en inicio. ---------- */
-const VIEWS = ["inicio", "empresas", "reportar", "postulaciones", "cv", "sueldos", "compromiso", "legal", "terminos"];
+const VIEWS = ["inicio", "empresas", "reportar", "postulaciones", "cv", "sueldos", "compromiso", "legal", "terminos", "cuenta"];
 
 function showView(name) {
   if (!VIEWS.includes(name)) name = "inicio";
@@ -764,6 +767,8 @@ async function submitReport(e) {
   e.preventDefault();
   formError("");
   if (!dataStore) return formError("Todavía estamos conectando con la base de datos. Intenta en unos segundos.");
+  // En modo Firebase lo que falta es ingresar; el mensaje de "nivel de acceso" es para la vista previa compartida.
+  if (dataStore.mode === "firebase" && !fb.user) return formError("Para reportar, ingresa con tu correo desde \"Mi cuenta\". No necesitas contraseña.");
   if (!canWrite) return formError("Tu nivel de acceso permite ver los reportes, pero no enviar uno nuevo.");
 
   const email = $("#rpEmail").value.trim().toLowerCase();
@@ -782,7 +787,9 @@ async function submitReport(e) {
   };
 
   // Validacion con mensajes concretos: que esta mal y como arreglarlo.
-  if (!EMAIL_RE.test(email) || email.length > 254) return formError("Escribe un correo válido, por ejemplo nombre@correo.cl.");
+  if (dataStore.mode === "firebase") {
+    if (!fb.user) return formError("Para reportar, ingresa con tu correo desde \"Mi cuenta\". No necesitas contraseña.");
+  } else if (!EMAIL_RE.test(email) || email.length > 254) return formError("Escribe un correo válido, por ejemplo nombre@correo.cl.");
   if (!rut) return formError("Busca la empresa y elígela de la lista. Puedes escribir la marca, la razón social o el RUT.");
   if (!report.region || !report.area || !report.channel) return formError("Elige la región, el área y cómo postulaste.");
   if (!report.month) return formError("Indica el mes del último contacto.");
@@ -832,6 +839,7 @@ async function submitReport(e) {
   } catch (err) {
     const code = err && err.code;
     if (code === "quota_exceeded") formError("La base de datos llegó a su límite de reportes. Avisa al equipo de SinVisto.");
+    else if (code === "permission-denied") formError("El servidor rechazó el reporte. Si ya reportaste esta empresa este mes, bórralo desde \"Mis reportes\" para corregirlo.");
     else if (code === "invalid_argument" || code === "not_granted") { canWrite = false; formError("Tu nivel de acceso permite ver los reportes, pero no enviar uno nuevo."); }
     else if (code === "resource_exhausted") formError("Se enviaron muchos datos seguidos. Espera un minuto e inténtalo de nuevo.");
     else formError("No pudimos guardar el reporte. Revisa tu conexión e inténtalo de nuevo.");
@@ -1360,6 +1368,235 @@ Equipo de selección de ${company}`;
 function renderNo() { $("#noText").value = noEmail(); }
 
 /* =====================================================================
+   FIREBASE: registro con enlace magico y base de datos publica.
+   Se activa solo si js/firebase-config.js trae una configuracion. Las
+   reglas de firestore.rules vuelven a validar todo en el servidor.
+   ===================================================================== */
+const FB_SCRIPT = "js/vendor/firebase.js";
+const EMAIL_FOR_LINK = "sinvisto.correoParaIngreso";
+const fb = { F: null, auth: null, db: null, user: null, unsub: null };
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = ttPolicy ? ttPolicy.createScriptURL(src) : src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("No se pudo cargar " + src));
+    document.head.append(s);
+  });
+}
+
+/* Tercera implementacion de la capa de datos. Cada reporte se escribe en un lote atomico junto con la
+   prueba privada de propiedad y el "claim" de empresa y mes, tal como exigen las reglas. */
+class FirestoreStore {
+  constructor(F, db, uid) {
+    this.F = F; this.db = db; this.uid = uid;
+    this.mode = "firebase";
+  }
+  subscribe(cb, onError) {
+    const { F, db } = this;
+    const q = F.query(F.collection(db, "reports"), F.orderBy("createdAt", "desc"), F.limit(1000));
+    return F.onSnapshot(q, (snap) => cb(snap.docs.map((d) => sanitizeReport(d.id, d.data())).filter(Boolean)), onError);
+  }
+  async add(report) {
+    const { F, db, uid } = this;
+    const ref = F.doc(F.collection(db, "reports"));
+    const b = F.writeBatch(db);
+    b.set(ref, report);
+    b.set(F.doc(db, `users/${uid}/reportes/${ref.id}`), { rut: report.rut, month: report.month, at: Date.now(), named: report.author.type === "name" });
+    b.set(F.doc(db, `users/${uid}/claims/${report.rut}_${report.month}`), { reportId: ref.id });
+    await b.commit();
+    return ref.id;
+  }
+  async remove(id) {
+    const { F, db, uid } = this;
+    const own = await F.getDoc(F.doc(db, `users/${uid}/reportes/${id}`));
+    if (!own.exists()) throw { code: "not-found" };
+    const { rut, month } = own.data();
+    const b = F.writeBatch(db);
+    b.delete(F.doc(db, `reports/${id}`));
+    b.delete(F.doc(db, `users/${uid}/reportes/${id}`));
+    b.delete(F.doc(db, `users/${uid}/claims/${rut}_${month}`));
+    await b.commit();
+  }
+  async update(id, patch) {
+    const { F, db, uid } = this;
+    const b = F.writeBatch(db);
+    b.update(F.doc(db, `reports/${id}`), patch);
+    b.update(F.doc(db, `users/${uid}/reportes/${id}`), { named: false });
+    await b.commit();
+  }
+  async loadMine() {
+    const { F, db, uid } = this;
+    if (!uid) return { email: "", consent: null, items: [] };
+    const [list, perfil] = await Promise.all([
+      F.getDocs(F.collection(db, `users/${uid}/reportes`)),
+      F.getDoc(F.doc(db, `users/${uid}/perfil/datos`))
+    ]);
+    const items = list.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => b.at - a.at);
+    return sanitizeProfile({ email: fb.user ? fb.user.email : "", consent: perfil.exists() ? perfil.data() : null, items });
+  }
+  async saveMine(profile) {
+    // El correo no se copia a la base de datos: vive solo en Firebase Authentication. Aqui va el consentimiento.
+    const { F, db, uid } = this;
+    if (uid && profile.consent) await F.setDoc(F.doc(db, `users/${uid}/perfil/datos`), profile.consent);
+  }
+}
+
+function maskEmail(e) {
+  const [u, d] = e.split("@");
+  return (u.length <= 2 ? u[0] + "*" : u.slice(0, 2) + "*".repeat(Math.min(6, u.length - 2))) + "@" + d;
+}
+
+function renderAccount(state, extra = "") {
+  const panel = $("#accountPanel");
+  const btn = $("#accountBtn");
+  btn.hidden = false;
+  if (state === "signedin") {
+    btn.textContent = "Mi cuenta";
+    setHTML(panel, html`<h3>Ingresaste con ${maskEmail(fb.user.email)}</h3>
+      <p class="small">Tus reportes se publican con seudónimo. Tu correo no aparece en ningún reporte.</p>
+      <div class="row-start">
+        <a class="btn" href="#reportar">Hacer un reporte</a>
+        <button class="btn ghost" type="button" id="acSignOut">Cerrar sesión</button>
+      </div>
+      <div class="danger-zone stack-xs">
+        <h4 class="eyebrow">Eliminar mi cuenta</h4>
+        <p class="small">Se borran tu cuenta y todos tus reportes. No se puede deshacer.</p>
+        <button class="btn sm ghost" type="button" id="acDelete">Eliminar mi cuenta y mis reportes</button>
+      </div>`);
+    return;
+  }
+  btn.textContent = "Ingresar";
+  if (state === "sent") {
+    setHTML(panel, html`<h3>Revisa tu correo</h3>
+      <p>Enviamos un enlace a <b>${extra}</b>. Ábrelo en este mismo dispositivo para ingresar. Si no llega en unos minutos, revisa la carpeta de spam.</p>
+      <button class="btn sm link" type="button" id="acRetry">Usar otro correo</button>`);
+    return;
+  }
+  const confirm = state === "confirm";
+  setHTML(panel, html`<form id="acForm" class="stack-m" novalidate>
+      <h3>${confirm ? "Confirma tu correo para terminar de ingresar" : "Ingresa con tu correo"}</h3>
+      <div class="field">
+        <label for="acEmail">Correo</label>
+        <input id="acEmail" type="email" maxlength="254" autocomplete="email" required placeholder="nombre@correo.cl" spellcheck="false">
+        <p class="hint">${confirm ? "Abriste el enlace en otro dispositivo: escribe el mismo correo al que llegó." : "Te enviaremos un enlace para ingresar. Sin contraseña."}</p>
+      </div>
+      <p class="form-error" id="acError" role="alert" hidden></p>
+      <button class="btn" type="submit">${confirm ? "Ingresar" : "Enviarme el enlace"}</button>
+    </form>`);
+}
+
+const AUTH_ERRORS = {
+  "auth/invalid-email": "El correo no es válido. Revísalo e inténtalo de nuevo.",
+  "auth/invalid-action-code": "El enlace ya se usó o venció. Pide uno nuevo.",
+  "auth/expired-action-code": "El enlace venció. Pide uno nuevo.",
+  "auth/too-many-requests": "Se pidieron muchos enlaces seguidos. Espera unos minutos.",
+  "auth/requires-recent-login": "Por seguridad, vuelve a ingresar con tu correo y luego elimina la cuenta.",
+  "auth/network-request-failed": "No hay conexión. Revisa tu internet e inténtalo de nuevo."
+};
+
+async function accountSubmit(e) {
+  e.preventDefault();
+  const email = $("#acEmail").value.trim().toLowerCase();
+  const err = (m) => { $("#acError").textContent = m; $("#acError").hidden = !m; };
+  if (!EMAIL_RE.test(email)) return err("Escribe un correo válido, por ejemplo nombre@correo.cl.");
+  const { F, auth } = fb;
+  try {
+    if (F.isSignInWithEmailLink(auth, location.href)) {
+      await F.signInWithEmailLink(auth, email, location.href);
+      history.replaceState(null, "", location.pathname + "#reportar");
+      showView("reportar");
+    } else {
+      // El enlace vuelve a esta misma pagina; el correo se recuerda en este navegador para completar el ingreso.
+      await F.sendSignInLinkToEmail(auth, email, { url: location.origin + location.pathname + "#cuenta", handleCodeInApp: true });
+      local.set(EMAIL_FOR_LINK, email);
+      renderAccount("sent", email);
+    }
+  } catch (ex) {
+    err(AUTH_ERRORS[ex && ex.code] || "No pudimos completar el ingreso. Inténtalo de nuevo.");
+  }
+}
+
+/* Elimina la cuenta: primero cada reporte (con su prueba y su claim), luego el consentimiento y la cuenta. */
+async function deleteAccount(btn) {
+  if (btn.dataset.armed !== "1") {
+    btn.dataset.armed = "1"; btn.textContent = "Confirmar: eliminar todo"; btn.classList.add("danger");
+    setTimeout(() => { if (btn.isConnected) { btn.dataset.armed = ""; btn.textContent = "Eliminar mi cuenta y mis reportes"; btn.classList.remove("danger"); } }, 5000);
+    return;
+  }
+  btn.disabled = true; btn.textContent = "Eliminando...";
+  try {
+    for (const it of mine.items) await dataStore.remove(it.id);
+    const { F, db } = fb;
+    await F.writeBatch(db).delete(F.doc(db, `users/${fb.user.uid}/perfil/datos`)).commit();
+    await F.deleteUser(fb.user);
+    local.remove(EMAIL_FOR_LINK);
+    showToast("Tu cuenta y tus reportes fueron eliminados.");
+  } catch (ex) {
+    showToast(AUTH_ERRORS[ex && ex.code] || "No pudimos eliminar la cuenta. Inténtalo de nuevo.");
+    btn.disabled = false; btn.textContent = "Eliminar mi cuenta y mis reportes"; btn.dataset.armed = "";
+  }
+}
+
+function syncReportIdentity() {
+  // En modo Firebase la cuenta verificada reemplaza al campo de correo del formulario.
+  $("#rpEmailBox").hidden = true;
+  const note = $("#rpAccountNote");
+  note.hidden = false;
+  if (fb.user) note.textContent = `Reportas con tu cuenta verificada (${maskEmail(fb.user.email)}). Tu correo no se publica.`;
+  else setHTML(note, html`Para reportar, <a href="#cuenta">ingresa con tu correo</a>. Es gratis y no necesitas contraseña.`);
+}
+
+async function connectFirebase(cfg) {
+  await loadScript(FB_SCRIPT);
+  const F = window.SinVistoFirebase;
+  const app = F.initializeApp(cfg);
+  // Persistencia local sin popups ni iframes: el enlace magico no los necesita.
+  fb.F = F;
+  fb.auth = F.initializeAuth(app, { persistence: F.browserLocalPersistence });
+  fb.db = F.initializeFirestore(app, {});
+  // Solo para pruebas locales: conecta con los emuladores si la configuracion lo pide explicitamente.
+  if (cfg.emulators === true) {
+    F.connectAuthEmulator(fb.auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    F.connectFirestoreEmulator(fb.db, "127.0.0.1", 8080);
+  }
+
+  $("#accountPanel").addEventListener("submit", (e) => { if (e.target.id === "acForm") accountSubmit(e); });
+  $("#accountPanel").addEventListener("click", (e) => {
+    if (e.target.id === "acSignOut") F.signOut(fb.auth);
+    if (e.target.id === "acRetry") renderAccount("form");
+    if (e.target.id === "acDelete") deleteAccount(e.target);
+  });
+
+  // Vuelta desde el enlace del correo: si el correo esta recordado se completa solo; si no, se pide.
+  if (F.isSignInWithEmailLink(fb.auth, location.href)) {
+    const saved = local.get(EMAIL_FOR_LINK, "");
+    if (saved) {
+      try {
+        await F.signInWithEmailLink(fb.auth, saved, location.href);
+        local.remove(EMAIL_FOR_LINK);
+        history.replaceState(null, "", location.pathname + "#reportar");
+        showView("reportar");
+      } catch (ex) { renderAccount("confirm"); }
+    } else {
+      renderAccount("confirm");
+    }
+  }
+
+  F.onAuthStateChanged(fb.auth, (user) => {
+    fb.user = user && user.emailVerified ? user : null;
+    canWrite = Boolean(fb.user);
+    if (fb.unsub) fb.unsub();
+    start(new FirestoreStore(F, fb.db, fb.user ? fb.user.uid : null));
+    if (fb.user) renderAccount("signedin");
+    else if (!F.isSignInWithEmailLink(fb.auth, location.href)) renderAccount("form");
+    syncReportIdentity();
+    setMode("Tu identidad está protegida.", "Tu reporte se publica con un seudónimo aleatorio. Tu correo no aparece en ningún reporte ni se entrega a la empresa.", true);
+  });
+}
+
+/* =====================================================================
    CONEXION CON LA BASE DE DATOS
    Dentro del visor de claude.ai existe window.claude.use(); fuera de el
    (archivo local, GitHub Pages) no, y se usa el modo demostracion.
@@ -1373,7 +1610,7 @@ function setMode(title, text, shared) {
 
 function start(store) {
   dataStore = store;
-  store.subscribe((list) => { reports = list; renderAll(); }, () => {
+  fb.unsub = store.subscribe((list) => { reports = list; renderAll(); }, () => {
     setMode("Sin conexión.", "Recarga la página para ver los reportes nuevos.", false);
   });
   store.loadMine().then((m) => {
@@ -1384,6 +1621,10 @@ function start(store) {
 }
 
 async function connect() {
+  if (window.SINVISTO_FIREBASE && window.SINVISTO_FIREBASE.projectId) {
+    try { await connectFirebase(window.SINVISTO_FIREBASE); return; }
+    catch (ex) { setMode("Sin conexión.", "No pudimos conectar con la base de datos. Mostramos el modo demostración.", false); }
+  }
   const use = window.claude && typeof window.claude.use === "function" ? window.claude.use.bind(window.claude) : null;
   if (use) {
     const [db, user, sample] = await Promise.all([use("db"), use("user"), use("sample")]);

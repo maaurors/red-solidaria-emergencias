@@ -1,0 +1,16 @@
+{
+  "name": "sinvisto-herramientas",
+  "private": true,
+  "description": "Herramientas de desarrollo de SinVisto: empaquetado del SDK de Firebase y pruebas de las reglas de seguridad.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild entrada-firebase.js --bundle --format=iife --minify --target=es2020 --legal-comments=external --outfile=../js/vendor/firebase.js",
+    "test:reglas": "firebase emulators:exec --only firestore --project demo-sinvisto --config ../firebase.json \"node --test pruebas/reglas.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "esbuild": "0.28.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.33.0"
+  }
+}

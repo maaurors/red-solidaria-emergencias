@@ -2,14 +2,17 @@
   "hosting": {
     "public": ".",
     "ignore": [
-      "firebase.json",
-      "README.md",
-      "SECURITY.md",
+      ".claude/**",
       ".git/**",
       ".gitignore",
       ".nojekyll",
-      "scripts/**",
-      ".claude/**"
+      "README.md",
+      "ROADMAP.md",
+      "SECURITY.md",
+      "firebase.json",
+      "firestore.rules",
+      "herramientas/**",
+      "scripts/**"
     ],
     "cleanUrls": true,
     "headers": [
@@ -18,7 +21,7 @@
         "headers": [
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; manifest-src 'self'; form-action 'none'; base-uri 'none'; upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types sinvisto; frame-ancestors 'none'"
+            "value": "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; manifest-src 'self'; form-action 'none'; base-uri 'none'; upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types sinvisto; frame-ancestors 'none'"
           },
           {
             "key": "Strict-Transport-Security",
@@ -82,5 +85,19 @@
         ]
       }
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080,
+      "host": "127.0.0.1"
+    },
+    "singleProjectMode": true,
+    "auth": {
+      "port": 9099,
+      "host": "127.0.0.1"
+    }
   }
 }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- CSP de respaldo para hosting sin cabeceras propias (GitHub Pages). En Firebase se envia como cabecera HTTP,
      que ademas permite frame-ancestors; la meta no lo admite. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; manifest-src 'self'; form-action 'none'; base-uri 'none'; upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types sinvisto">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; manifest-src 'self'; form-action 'none'; base-uri 'none'; upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types sinvisto">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="color-scheme" content="light">
 <title>SinVisto Chile</title>
@@ -30,6 +30,7 @@
 <link rel="preload" href="fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/atkinson-hyperlegible-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/styles.css">
+<script src="js/firebase-config.js" defer></script>
 <script src="js/app.js" defer></script>
 </head>
 <body>
@@ -53,6 +54,7 @@
       <a href="#compromiso">Para empresas</a>
       <a href="#terminos">Privacidad</a>
     </nav>
+    <a class="account-btn" href="#cuenta" id="accountBtn" hidden>Ingresar</a>
   </div>
 </header>
 
@@ -190,7 +192,8 @@
         <fieldset class="stack-m" id="rpFields">
           <legend class="sr-only">Datos del proceso</legend>
 
-          <div class="field">
+          <p class="account-note" id="rpAccountNote" hidden></p>
+          <div class="field" id="rpEmailBox">
             <label for="rpEmail">Tu correo</label>
             <input id="rpEmail" type="email" maxlength="254" autocomplete="email" required placeholder="nombre@correo.cl" spellcheck="false">
             <p class="hint">No se publica. Queda en tu espacio privado y sirve para evitar reportes duplicados.</p>
@@ -562,6 +565,31 @@
   </div>
 </section>
 
+<!-- =========================== MI CUENTA =========================== -->
+<section id="v-cuenta" data-view="cuenta" hidden>
+  <div class="wrap">
+    <div class="view-head">
+      <p class="eyebrow">Sin contraseñas</p>
+      <h2>Mi cuenta</h2>
+      <p class="lead">Ingresa con tu correo: te enviamos un enlace y listo. Así cada reporte es de una persona real, y tú sigues siendo anónima o anónimo para todos.</p>
+    </div>
+    <div class="report-layout">
+      <div class="card stack-m" id="accountPanel">
+        <p class="small">El ingreso con correo estará disponible cuando SinVisto se publique.</p>
+      </div>
+      <aside class="card notice stack-xs">
+        <h3>Por qué pedimos ingresar</h3>
+        <ul class="small">
+          <li>Para que nadie pueda inflar ni borrar reportes ajenos.</li>
+          <li>Para asegurar un reporte por persona, empresa y mes.</li>
+          <li>Tu correo queda en el sistema de acceso, verificado, y no se copia a los reportes.</li>
+          <li>Puedes eliminar tu cuenta y todos tus reportes cuando quieras.</li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
 <!-- =========================== PRIVACIDAD Y TERMINOS =========================== -->
 <section id="v-terminos" data-view="terminos" hidden>
   <div class="wrap legal-doc">
@@ -590,7 +618,7 @@
         <table class="legal-table">
           <thead><tr><th>Dato</th><th>Para qué</th><th>Base legal</th><th>¿Se publica?</th></tr></thead>
           <tbody>
-            <tr><td>Correo electrónico</td><td>Evitar que una persona reporte varias veces el mismo proceso</td><td>Tu consentimiento</td><td>No, nunca</td></tr>
+            <tr><td>Correo electrónico</td><td>Ingresar sin contraseña y evitar que una persona reporte varias veces el mismo proceso. Queda en el sistema de acceso y no se copia a los reportes</td><td>Tu consentimiento</td><td>No, nunca</td></tr>
             <tr><td>Correo, si marcas la casilla opcional</td><td>Avisarte si la empresa responde a los reportes</td><td>Tu consentimiento, aparte del anterior</td><td>No, nunca</td></tr>
             <tr><td>Identificador de tu sesión</td><td>Guardar tu espacio privado y permitirte borrar tus reportes</td><td>Necesario para prestar el servicio que pides</td><td>No, nunca</td></tr>
             <tr><td>Reporte: empresa, región, área, canal, etapa, resultado, mes y comentario</td><td>Calcular el Índice de Respuesta de cada empresa</td><td>Tu consentimiento</td><td>Sí, con seudónimo</td></tr>
@@ -611,7 +639,7 @@
       </ul>
 
       <h3>6. Con quién se comparten</h3>
-      <p>No vendemos, arrendamos ni cedemos datos personales. Las empresas solo ven cifras agregadas y comentarios firmados con seudónimo. Usamos proveedores de alojamiento que tratan los datos por encargo nuestro y bajo nuestras instrucciones. Algunos de esos servidores pueden estar fuera de Chile, y exigimos que ofrezcan un nivel de protección adecuado. Si usas "Mejora tu CV", el texto, sin tus datos de contacto, se envía a Anthropic, que provee el modelo de IA Claude, solo para generar las sugerencias. Solo entregaríamos información que te identifique por orden de un tribunal competente.</p>
+      <p>No vendemos, arrendamos ni cedemos datos personales. Las empresas solo ven cifras agregadas y comentarios firmados con seudónimo. Usamos proveedores de alojamiento que tratan los datos por encargo nuestro y bajo nuestras instrucciones. Algunos de esos servidores pueden estar fuera de Chile, y exigimos que ofrezcan un nivel de protección adecuado. El ingreso con correo y la base de datos funcionan con Firebase, de Google. Si usas "Mejora tu CV", el texto, sin tus datos de contacto, se envía a Anthropic, que provee el modelo de IA Claude, solo para generar las sugerencias. Solo entregaríamos información que te identifique por orden de un tribunal competente.</p>
 
       <h3>7. Tus derechos</h3>
       <p>Tienes derecho de acceso, rectificación, supresión, oposición, portabilidad y bloqueo de tus datos. Puedes borrar tus reportes y quitar tu nombre directamente en "Mis reportes". Para lo demás, escribe al contacto del responsable. Si no quedas conforme con nuestra respuesta, puedes reclamar ante la Agencia de Protección de Datos Personales, cuando esté en funciones, o ante los tribunales de justicia.</p>

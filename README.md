@@ -74,6 +74,33 @@ Las fotos de `img/` provienen de Wikimedia Commons bajo licencia [CC BY 2.0](htt
 - `cansancio.webp`: [Woman feeling stressed while working at a kitchen table](https://commons.wikimedia.org/wiki/File:Woman_feeling_stressed_while_working_at_a_kitchen_table.jpg), Shixart1985.
 - `espera-telefono.webp`: [Woman waiting and playing on her phone](https://commons.wikimedia.org/wiki/File:Woman_waiting_and_playing_on_her_phone.jpg), Rawpixel Ltd.
 
+## Registro y base de datos pública (Firebase)
+
+El sitio trae una tercera implementación de la capa de datos, `FirestoreStore`, con ingreso por **enlace mágico** (sin contraseñas). Se activa al completar `js/firebase-config.js`:
+
+1. Crea un proyecto en [console.firebase.google.com](https://console.firebase.google.com) (plan Spark, gratuito) y agrega una app web.
+2. En *Authentication → Métodos de acceso* activa **Correo electrónico** y **Vínculo del correo electrónico (acceso sin contraseña)**. Agrega tu dominio en *Dominios autorizados*.
+3. Crea la base de datos Firestore en la región `southamerica-west1` (Santiago).
+4. Pega la configuración web en `js/firebase-config.js`.
+5. Despliega reglas y sitio: `firebase deploy --only firestore:rules,hosting`.
+
+### Seguridad en el servidor (`firestore.rules`)
+
+- El reporte público **no contiene el uid ni el correo**. La propiedad se prueba con `users/{uid}/reportes/{id}`, creado en el mismo lote atómico.
+- **Un reporte por persona, empresa y mes** con `users/{uid}/claims/{rut_mes}`, que solo se puede crear una vez.
+- Validación completa del esquema: listas cerradas, RUT, mes, fecha redondeada al día, comentario sin correos, teléfonos, enlaces ni HTML.
+- Solo la dueña puede borrar su reporte o cambiar su nombre por un seudónimo.
+
+### Pruebas
+
+```
+cd herramientas && npm install
+npm run test:reglas                      # 38 pruebas de las reglas contra el emulador de Firestore
+python3 -m http.server 8765 --directory ..   # en otra terminal
+npx firebase emulators:exec --only auth,firestore --project demo-sinvisto --config ../firebase.json "node pruebas/flujo-firebase.e2e.cjs"
+npm run build                            # vuelve a empaquetar js/vendor/firebase.js (Firebase 12.19.0)
+```
+
 ## Llegar a todo público
 
 El sitio ya trae lo necesario para compartirse y encontrarse:
