@@ -40,6 +40,8 @@
 }
 
 * { box-sizing: border-box; }
+/* El atributo hidden siempre gana: ninguna regla de display de un componente puede volver a mostrar un elemento oculto. */
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink);
   font-family: var(--f-body); font-size: 1rem; line-height: 1.6;
@@ -358,3 +360,21 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
 .co-head .mono-logo { background: var(--accent); }
 /* Los botones dentro de una tarjeta de empresa no se estiran al ancho de la grilla. */
 .co-card > .btn { justify-self: start; }
+
+/* ---------- Registro de empresas, peticiones y comentarios (v3) ---------- */
+.legend-note { font-family: var(--f-body); font-weight: 400; font-size: .8rem; color: var(--muted); margin-left: .4rem; }
+.combo { position: relative; }
+.combo-list {
+  position: relative; z-index: 5; margin: .3rem 0 0; padding: .3rem; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(20, 27, 45, .12);
+  max-height: 22rem; overflow-y: auto;
+}
+.combo-list [role="option"] { display: grid; gap: .1rem; padding: .55rem .7rem; border-radius: 8px; cursor: pointer; }
+.combo-list [role="option"][aria-selected="true"], .combo-list [role="option"]:hover { background: var(--accent-soft); }
+.combo-empty { padding: .6rem .7rem; font-size: .88rem; color: var(--muted); }
+.combo-picked { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: .6rem .8rem; border: 1.5px solid var(--accent); border-radius: 8px; background: var(--accent-soft); }
+.combo-picked .small { display: block; }
+.co-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+.stage-fill.ask { background: var(--accent); }
+.quote { margin: 0; padding: .55rem .8rem; border-left: 3px solid var(--line); color: var(--ink); font-style: italic; font-size: .95rem; }
+@media (max-width: 900px) { .co-cols { grid-template-columns: minmax(0, 1fr); } }

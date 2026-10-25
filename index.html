@@ -139,10 +139,10 @@
     <div class="view-head">
       <p class="eyebrow">Métrica construida por la comunidad</p>
       <h2>Buscar empresa</h2>
-      <p class="lead">Cada tarjeta se calcula con los reportes anónimos recibidos. Si la empresa que buscas no aparece, nadie la ha reportado todavía.</p>
+      <p class="lead">Cada tarjeta se calcula con los reportes anónimos recibidos. Buscamos entre los empleadores de 50 trabajadores o más registrados en el SII.</p>
     </div>
     <div class="toolbar">
-      <div class="field grow-field"><label for="coQ">Nombre de la empresa</label><input id="coQ" maxlength="80" type="search" placeholder="Escribe el nombre" autocomplete="off"></div>
+      <div class="field grow-field"><label for="coQ">Empresa</label><input id="coQ" maxlength="80" type="search" placeholder="Nombre, marca o RUT. Ej: BCI" autocomplete="off"></div>
       <div class="field"><label for="coSort">Ordenar por</label>
         <select id="coSort">
           <option value="n">Más reportes</option>
@@ -178,10 +178,16 @@
           </div>
 
           <div class="form-grid">
-            <div class="field full">
+            <div class="field full combo">
               <label for="rpCompany">Empresa</label>
-              <input id="rpCompany" maxlength="80" required list="rpCompanyList" placeholder="Nombre de la empresa" autocomplete="off">
-              <datalist id="rpCompanyList"></datalist>
+              <input id="rpCompany" maxlength="80" placeholder="Escribe el nombre, la marca o el RUT. Ej: BCI" autocomplete="off" spellcheck="false"
+                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="rpCompanyResults" aria-describedby="rpCompanyHint">
+              <ul class="combo-list" id="rpCompanyResults" role="listbox" aria-label="Empresas encontradas" hidden></ul>
+              <div class="combo-picked" id="rpPicked" hidden>
+                <div class="minw-0"><b id="rpPickedName"></b><span class="small" id="rpPickedMeta"></span></div>
+                <button class="btn sm link" type="button" id="rpPickedClear">Cambiar</button>
+              </div>
+              <p class="hint" id="rpCompanyHint">Elige la empresa del registro del SII, para que todos los reportes sumen a la misma.</p>
             </div>
             <div class="field">
               <label for="rpRegion">Región del cargo</label>
@@ -211,6 +217,17 @@
             <div class="choices" id="rpStage"></div>
           </fieldset>
 
+          <fieldset class="choice-group" id="rpAskGroup">
+            <legend>¿Qué te habría bastado? <span class="legend-note">Opcional, puedes marcar varias</span></legend>
+            <div class="choices" id="rpAsks"></div>
+          </fieldset>
+
+          <div class="field">
+            <label for="rpComment">En tus palabras <span class="legend-note">Opcional</span></label>
+            <textarea id="rpComment" maxlength="200" rows="3" placeholder="Ej: Solo pido que por último me digan si revisaron mi CV."></textarea>
+            <p class="hint"><span id="rpCommentCount">0</span>/200. Sin nombres de personas, teléfonos ni correos. Se publica cuando la empresa tiene 3 reportes o más.</p>
+          </div>
+
           <label class="check-row" for="rpTruth">
             <input type="checkbox" id="rpTruth" required>
             <span>Declaro que es mi experiencia real y que no incluyo datos de otras personas.</span>
@@ -225,7 +242,7 @@
         <div class="card notice stack-xs">
           <h3>Qué pasa con tus datos</h3>
           <ul class="small">
-            <li><b>Público:</b> empresa, región, área, canal, etapa, resultado y mes. Nada más.</li>
+            <li><b>Público:</b> empresa, región, área, canal, etapa, resultado, mes y tu comentario si lo escribes. Nada más.</li>
             <li><b>Privado:</b> tu correo y la lista de tus reportes. Solo tú los ves.</li>
             <li>Bajo 3 reportes, la empresa solo muestra la cantidad, sin detalle.</li>
             <li>Puedes borrar tus reportes cuando quieras.</li>
@@ -357,7 +374,8 @@
       <details class="card" open>
         <summary>Privacidad y anonimato</summary>
         <ul class="small">
-          <li>El reporte público contiene solo empresa, región, área, canal de postulación, etapa, resultado y mes. No contiene correo, nombre ni identificador de la persona.</li>
+          <li>El reporte público contiene solo empresa, región, área, canal de postulación, etapa, resultado, mes y un comentario opcional. No contiene correo, nombre ni identificador de la persona.</li>
+          <li>Las empresas vienen de la nómina pública del SII. Solo se incluyen empleadores activos con 50 trabajadores o más, sin EIRL ni sociedades de hecho, que suelen llevar el nombre de una persona.</li>
           <li>Tu correo se guarda en tu espacio privado, separado del reporte. Nadie más puede leerlo.</li>
           <li>El detalle de una empresa se publica desde 3 reportes, para que la empresa no pueda deducir quién reportó.</li>
           <li>Puedes borrar tus reportes en cualquier momento desde "Mis reportes", ejerciendo tu derecho de supresión.</li>
@@ -365,9 +383,9 @@
         </ul>
       </details>
       <details class="card" open>
-        <summary>Por qué no hay texto libre</summary>
+        <summary>Reglas para los comentarios</summary>
         <ul class="small">
-          <li>Los reportes se arman con listas cerradas. Así nadie puede publicar nombres de personas ni acusaciones.</li>
+          <li>Casi todo el reporte se arma con listas cerradas. El comentario opcional tiene 200 caracteres y un filtro automático que rechaza nombres de personas, teléfonos, RUT, correos, enlaces e insultos.</li>
           <li>Las injurias y calumnias son delitos en el Código Penal chileno. Un dato estructurado ("no respondieron después de la entrevista final") es un hecho verificable, no una opinión ofensiva.</li>
           <li>Si viviste acoso o discriminación, eso se denuncia ante la Dirección del Trabajo, no en una plataforma de reseñas.</li>
           <li>Una empresa no puede pagar para mejorar su Índice de Respuesta.</li>
@@ -395,6 +413,7 @@
 <footer>
   <div class="wrap">
     <span>SinVisto, plataforma chilena contra el ghosting laboral. Prototipo.</span>
+    <span>Registro de empresas: nómina de personas jurídicas del <a href="https://www.sii.cl/sobre_el_sii/nominapersonasjuridicas.html" target="_blank" rel="noopener noreferrer">SII</a>, año comercial 2024.</span>
     <span>Fotografías: <a href="https://commons.wikimedia.org/wiki/File:Frustrated_woman_working_on_laptop_in_a_bright_kitchen.jpg" target="_blank" rel="noopener noreferrer">Shixart1985</a>, <a href="https://commons.wikimedia.org/wiki/File:Woman_feeling_stressed_while_working_at_a_kitchen_table.jpg" target="_blank" rel="noopener noreferrer">Shixart1985</a> y <a href="https://commons.wikimedia.org/wiki/File:Woman_waiting_and_playing_on_her_phone.jpg" target="_blank" rel="noopener noreferrer">Rawpixel Ltd</a>, bajo licencia <a href="https://creativecommons.org/licenses/by/2.0/deed.es" target="_blank" rel="noopener noreferrer">CC BY 2.0</a>.</span>
   </div>
 </footer>

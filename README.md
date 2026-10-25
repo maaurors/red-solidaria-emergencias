@@ -9,12 +9,22 @@ Plataforma de transparencia laboral para Chile. Su objetivo es terminar con el g
 3. **Métrica**: el buscador agrupa los reportes por empresa (normalizando "S.A.", "SpA", tildes y mayúsculas) y calcula el Índice de Respuesta, el porcentaje de ghosting y la etapa donde se corta el contacto.
 4. **k-anonimato**: con menos de 3 reportes solo se muestra la cantidad, para que la empresa no pueda deducir quién reportó. Bajo 15 reportes la métrica se marca como preliminar.
 
+## Registro de empresas
+
+`data/empresas.json` se genera desde la [nómina de personas jurídicas del SII](https://www.sii.cl/sobre_el_sii/nominapersonasjuridicas.html) con `scripts/construir_catalogo.py`. Incluye 21.420 empleadores activos con 50 trabajadores o más, sin EIRL ni sociedades de hecho, más alias de marcas conocidas (BCI, Lider, Movistar...) verificados contra la misma nómina. Para actualizarlo cuando el SII publique un nuevo año:
+
+```
+python3 scripts/construir_catalogo.py PUB_EMPRESAS_PJ_2020_A_2024.zip
+```
+
+Cada reporte apunta al RUT de la empresa. El único texto libre es un comentario opcional de 200 caracteres que pasa por un filtro (nombres de personas, teléfonos, RUT, correos, enlaces e insultos) y se publica solo cuando la empresa tiene 3 reportes o más.
+
 ## Modos de datos
 
 | Modo | Cuándo | Dónde quedan los reportes |
 |---|---|---|
 | Compartido | Dentro del visor de claude.ai, con la capacidad `db` | Base de datos del artifact, visible para todas las personas con acceso |
-| Demostración | Archivo local, GitHub Pages o Firebase sin backend | Solo en el navegador, con empresas de ejemplo marcadas como tales |
+| Demostración | Archivo local, GitHub Pages o Firebase sin backend | Solo en el navegador de quien reporta |
 
 Para un lanzamiento público hace falta una tercera implementación de la capa de datos (por ejemplo Firestore con Cloud Functions), con verificación del correo por enlace y validación de los reportes en el servidor. La interfaz `subscribe / add / remove / loadMine / saveMine` de `js/app.js` está pensada para eso.
 

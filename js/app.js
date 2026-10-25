@@ -73,6 +73,16 @@ const OUTCOMES = {
   atiempo: { label: "Me respondieron a tiempo", help: "Recibí una respuesta final en 10 días hábiles o menos." }
 };
 
+// "¿Que te habria bastado?": lo minimo que la persona esperaba. Se agrega como metrica por empresa.
+const ASKS = {
+  aviso_cv: "Que me avisaran que revisaron mi CV",
+  resultado: "Que me dijeran si quedé o no",
+  plazo: "Que cumplieran el plazo que me dieron",
+  motivo: "Que me dieran un motivo breve",
+  automatico: "Un correo automático me habría bastado"
+};
+
+const COMMENT_MAX = 200;
 const K_ANON = 3;        // Reportes minimos para mostrar el detalle de una empresa.
 const PRELIMINAR = 15;   // Bajo esta cantidad la metrica se marca como preliminar.
 const DAILY_LIMIT = 5;   // Reportes por persona cada 24 horas.
@@ -109,30 +119,115 @@ function monthLabel(m) {
 }
 
 /* =====================================================================
-   EMPRESAS: nombre visible y clave de agrupacion.
-   "Banco Ejemplo S.A.", "banco ejemplo" y "BANCO EJEMPLO SpA" deben sumar
-   a la misma empresa, asi que se agrupan por una clave normalizada.
+   REGISTRO DE EMPRESAS (data/empresas.json, generado desde la nomina del
+   SII con scripts/construir_catalogo.py). Cada reporte apunta a un RUT del
+   registro: asi "BCI", "Bci" y "Banco de Credito e Inversiones" suman a la
+   misma empresa, y nadie puede escribir el nombre de una persona.
    ===================================================================== */
-const LEGAL_SUFFIXES = new Set(["sa", "spa", "ltda", "limitada", "eirl", "sociedad", "anonima", "cia", "y"]);
+const catalog = { ready: false, failed: false, byRut: new Map(), list: [], rubros: [] };
 
-function companyKey(name) {
-  return name
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")  // Quita tildes: "Logística" -> "Logistica".
-    .toLowerCase()
-    .replace(/\b(s\.?\s?a|s\.?p\.?a|ltda|e\.?i\.?r\.?l)\.?\b/g, " ")
-    .replace(/[^a-z0-9 ]+/g, " ")
-    .split(/\s+/)
-    .filter((w) => w && !LEGAL_SUFFIXES.has(w))
-    .join("-")
-    .slice(0, 80);
+/* Texto sin tildes ni puntuacion, para comparar lo que escribe la persona con el registro. */
+function norm(s) {
+  return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/[^a-z0-9ñ ]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
-// Solo letras (con tildes y enie), numeros, espacios y puntuacion comun en razones sociales.
-const COMPANY_RE = /^[\p{L}\p{N}][\p{L}\p{N} .,&'()\-/]{1,79}$/u;
+const LEGAL_WORDS = /\b(s a|sa|spa|ltda|limitada|y cia|cia)\b/g;
 
-function cleanCompanyName(raw) {
-  const name = String(raw || "").replace(/\s+/g, " ").trim();
-  return COMPANY_RE.test(name) && companyKey(name).length >= 2 ? name : null;
+async function loadCatalog() {
+  try {
+    const res = await fetch("data/empresas.json", { credentials: "same-origin" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const d = await res.json();
+    if (!d || d.version !== 1 || !Array.isArray(d.empresas) || !Array.isArray(d.rubros)) throw new Error("formato");
+    // "Comercio al por mayor y al por menor; reparacion de..." -> "Comercio al por mayor y al por menor".
+    catalog.rubros = d.rubros.map((r) => String(r).split(";")[0].trim());
+    for (const e of d.empresas) {
+      if (!Array.isArray(e) || typeof e[0] !== "string" || typeof e[1] !== "string") continue;
+      const item = { rut: e[0], name: e[1].slice(0, 120), rubro: catalog.rubros[e[2]] || "", region: REGIONS[e[3]] || "", size: Number(e[4]) || 1,
+        brand: "", aliases: [], n: "" };
+      item.n = norm(item.name).replace(LEGAL_WORDS, " ").replace(/\s+/g, " ").trim();
+      catalog.byRut.set(item.rut, item);
+      catalog.list.push(item);
+    }
+    // La primera marca de cada RUT es la que se muestra; todas sirven para buscar.
+    for (const [alias, rut] of Object.entries(d.alias || {})) {
+      const item = catalog.byRut.get(rut);
+      if (!item) continue;
+      if (!item.brand) item.brand = alias;
+      item.aliases.push(norm(alias));
+    }
+    catalog.ready = true;
+  } catch (err) {
+    catalog.failed = true;
+  }
+}
+
+/* Busca en el registro. Prioridad: marca exacta, marca que empieza igual, RUT, nombre que empieza igual,
+   nombre que contiene todas las palabras. Devuelve como maximo `max` empresas. */
+function searchCatalog(text, max = 8) {
+  const q = norm(text);
+  if (!catalog.ready || q.length < 2) return [];
+  const digits = text.replace(/[^0-9kK]/g, "").toUpperCase();
+  const words = q.replace(LEGAL_WORDS, " ").split(" ").filter(Boolean);
+  const scored = [];
+  for (const it of catalog.list) {
+    let s = 0;
+    if (it.aliases.includes(q)) s = 100;
+    else if (it.aliases.some((a) => a.startsWith(q))) s = 80;
+    else if (digits.length >= 7 && it.rut.replace("-", "").startsWith(digits)) s = 70;
+    else if (it.n.startsWith(q)) s = 60;
+    else if (words.length && words.every((w) => it.n.includes(w))) s = 40;
+    if (s) scored.push([s + it.size, it]);
+  }
+  return scored.sort((a, b) => b[0] - a[0] || a[1].name.localeCompare(b[1].name)).slice(0, max).map((x) => x[1]);
+}
+
+function formatRut(rut) {
+  const [num, dv] = rut.split("-");
+  return Number(num).toLocaleString("es-CL") + "-" + dv;
+}
+
+function companyLabel(rut) {
+  const it = catalog.byRut.get(rut);
+  if (!it) return { title: "Empresa RUT " + formatRut(rut), legal: "", meta: "" };
+  return {
+    title: it.brand || it.name,
+    legal: it.brand ? it.name : "",
+    meta: [it.rubro, "RUT " + formatRut(it.rut)].filter(Boolean).join(" · ")
+  };
+}
+
+/* =====================================================================
+   FILTRO DE COMENTARIOS. Devuelve un mensaje que explica que corregir, o
+   "" si el texto se puede publicar. Es un primer filtro automatico; en
+   produccion se complementa con moderacion en el servidor.
+   ===================================================================== */
+// Cada raiz acepta plural y genero (weon, weona, weones); \b solo se exige al inicio de la palabra.
+const INSULTS = /\b(we[oó]n|hue[vb][oó]n|conchetumare|ctm|culia|qlia|imb[eé]cil|idiota|est[uú]pid|mierda|put[oa]|malparid)(e?s|as?|os?|[oa]s?)?(?![a-záéíóúñ])/i;
+const HONORIFIC_NAME = /\b(sr|sra|srta|don|doña|señor|señora|señorita)\.?\s+[A-ZÁÉÍÓÚÑ]/i;
+const TWO_CAPITALIZED = /(?:^|[^.!?]\s)([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/u;
+
+function checkComment(text, rut) {
+  const t = text.trim();
+  if (!t) return "";
+  if (t.length > COMMENT_MAX) return `El comentario puede tener hasta ${COMMENT_MAX} caracteres.`;
+  if (/[<>{}]/.test(t)) return "El comentario no puede contener los signos < > { }.";
+  if (/@|https?:|www\.|\.(cl|com|net|org)\b/i.test(t)) return "Quita correos y enlaces del comentario.";
+  if (/\d[\d .-]{5,}\d/.test(t)) return "Quita números largos, como teléfonos o RUT, del comentario.";
+  if (INSULTS.test(t)) return "Escribe el comentario sin groserías ni insultos: así se toma en serio.";
+  if (HONORIFIC_NAME.test(t)) return "No menciones a personas por su nombre. Puedes decir \"la reclutadora\" o \"el jefe de área\".";
+  // Dos palabras seguidas con mayuscula a mitad de frase suelen ser un nombre y apellido,
+  // salvo que formen parte del nombre o la marca de la empresa elegida.
+  const m = t.match(TWO_CAPITALIZED);
+  if (m) {
+    const it = catalog.byRut.get(rut);
+    const allowed = it ? norm(it.name + " " + (it.brand || "")) : "";
+    if (!allowed.includes(norm(m[1])) || !allowed.includes(norm(m[2]))) {
+      return `"${m[1]} ${m[2]}" parece el nombre de una persona. No menciones a personas por su nombre.`;
+    }
+  }
+  return "";
 }
 
 /* =====================================================================
@@ -140,10 +235,13 @@ function cleanCompanyName(raw) {
    escribio otra persona: se trata como entrada no confiable y cada campo
    se revisa contra su lista cerrada. Lo que no calza se descarta.
    ===================================================================== */
+const RUT_RE = /^\d{7,8}-[\dK]$/;
+
 function sanitizeReport(id, o) {
   if (!o || typeof o !== "object") return null;
-  const company = cleanCompanyName(o.company);
-  if (!company) return null;
+  // El RUT debe tener digito verificador correcto y, si el registro ya cargo, existir en el.
+  if (typeof o.rut !== "string" || !RUT_RE.test(o.rut) || !validarRut(o.rut)) return null;
+  if (catalog.ready && !catalog.byRut.has(o.rut)) return null;
   if (!REGIONS.includes(o.region) || !AREAS.includes(o.area) || !CHANNELS.includes(o.channel)) return null;
   if (!Object.hasOwn(OUTCOMES, o.outcome)) return null;
   // La etapa solo aplica cuando no hubo respuesta a tiempo.
@@ -152,8 +250,11 @@ function sanitizeReport(id, o) {
   if (typeof o.month !== "string" || !/^20\d{2}-(0[1-9]|1[0-2])$/.test(o.month) || o.month > thisMonth()) return null;
   const createdAt = Number(o.createdAt);
   if (!Number.isFinite(createdAt)) return null;
-  return { id: String(id), company, key: companyKey(company), region: o.region, area: o.area, channel: o.channel,
-    outcome: o.outcome, stage, month: o.month, createdAt, example: o.example === true };
+  const asks = Array.isArray(o.asks) ? [...new Set(o.asks.filter((a) => Object.hasOwn(ASKS, a)))] : [];
+  // Un comentario que no pasa el filtro no invalida el reporte: solo se descarta el comentario.
+  const comment = typeof o.comment === "string" && !checkComment(o.comment, o.rut) ? o.comment.trim() : "";
+  return { id: String(id), rut: o.rut, region: o.region, area: o.area, channel: o.channel,
+    outcome: o.outcome, stage, month: o.month, createdAt, asks, comment };
 }
 
 /* =====================================================================
@@ -199,17 +300,17 @@ class SharedStore {
   }
 }
 
-/* Modo demostracion: todo queda en este navegador. Trae reportes de ejemplo,
-   marcados como tales, para que se vea como funciona la metrica. */
-const DEMO_KEY = "sinvisto.demo.reportes.v1";
-const DEMO_MINE_KEY = "sinvisto.demo.misreportes.v1";
+/* Modo demostracion: todo queda en este navegador. No trae reportes inventados:
+   las empresas del registro son reales y no se les atribuyen hechos falsos. */
+const DEMO_KEY = "sinvisto.demo.reportes.v2";
+const DEMO_MINE_KEY = "sinvisto.demo.misreportes.v2";
 
 class LocalStore {
   constructor() {
     this.mode = "demo";
     this.listeners = [];
     const saved = local.get(DEMO_KEY, null);
-    this.reports = Array.isArray(saved) ? saved : demoReports();
+    this.reports = Array.isArray(saved) ? saved.slice(0, 2000) : [];
   }
   emit() {
     local.set(DEMO_KEY, this.reports);
@@ -238,34 +339,13 @@ class LocalStore {
   }
 }
 
-function demoReports() {
-  // Empresas ficticias. Solo existen en el modo demostracion y se muestran con la etiqueta "ejemplo".
-  const m = (n) => { const d = new Date(); d.setMonth(d.getMonth() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
-  const base = Date.now() - 86400000;
-  const rows = [
-    ["Financiera Pacífico Sur", "Metropolitana", "Comercial y ventas", "nunca", "final", 1], ["Financiera Pacífico Sur", "Metropolitana", "Finanzas y contabilidad", "nunca", "final", 2],
-    ["Financiera Pacífico Sur", "Valparaíso", "Comercial y ventas", "nunca", "jefatura", 1], ["Financiera Pacífico Sur", "Metropolitana", "Atención a clientes", "tarde", "rrhh", 3],
-    ["Financiera Pacífico Sur", "Metropolitana", "Comercial y ventas", "atiempo", null, 2],
-    ["Logística Andes Norte", "Antofagasta", "Logística y operaciones", "atiempo", null, 1], ["Logística Andes Norte", "Antofagasta", "Ingeniería", "atiempo", null, 2],
-    ["Logística Andes Norte", "Atacama", "Logística y operaciones", "atiempo", null, 4], ["Logística Andes Norte", "Antofagasta", "Administración", "tarde", "prueba", 3],
-    ["Tiendas Cordillera", "Biobío", "Retail", "nunca", "rrhh", 1], ["Tiendas Cordillera", "Biobío", "Retail", "nunca", "cv", 2],
-    ["Tiendas Cordillera", "Maule", "Retail", "nunca", "examenes", 2], ["Tiendas Cordillera", "Biobío", "Atención a clientes", "nunca", "rrhh", 5],
-    ["Puerto Digital Valparaíso", "Valparaíso", "Tecnología", "atiempo", null, 1]
-  ];
-  return rows.map(([company, region, area, outcome, stage, ago], i) => ({
-    id: "demo" + i, company, region, area, channel: CHANNELS[i % CHANNELS.length], outcome, stage, month: m(ago),
-    createdAt: base - i * 3600000, example: true
-  }));
-}
-
 /* Espacio privado: correo y referencias a los reportes propios, validados igual que todo lo demas. */
 function sanitizeProfile(o) {
   const items = o && Array.isArray(o.items) ? o.items : [];
   return {
     email: o && typeof o.email === "string" && EMAIL_RE.test(o.email) ? o.email : "",
-    items: items.slice(0, 200).map((it) => it && typeof it.id === "string" && typeof it.key === "string" ? {
-      id: it.id.slice(0, 64), key: it.key.slice(0, 80), company: cleanCompanyName(it.company) || "Empresa",
-      month: typeof it.month === "string" ? it.month.slice(0, 7) : "", at: Number(it.at) || 0
+    items: items.slice(0, 200).map((it) => it && typeof it.id === "string" && typeof it.rut === "string" && RUT_RE.test(it.rut) ? {
+      id: it.id.slice(0, 64), rut: it.rut, month: typeof it.month === "string" ? it.month.slice(0, 7) : "", at: Number(it.at) || 0
     } : null).filter(Boolean)
   };
 }
@@ -285,28 +365,23 @@ async function withRetry(fn) {
    METRICAS. Se calculan en el navegador a partir de los reportes.
    ===================================================================== */
 function aggregate(list) {
-  const byKey = new Map();
+  const byRut = new Map();
   for (const r of list) {
-    let c = byKey.get(r.key);
+    let c = byRut.get(r.rut);
     if (!c) {
-      c = { key: r.key, names: new Map(), n: 0, nunca: 0, tarde: 0, atiempo: 0, stages: {}, regions: new Set(), lastMonth: "", example: true };
-      byKey.set(r.key, c);
+      c = { rut: r.rut, n: 0, nunca: 0, tarde: 0, atiempo: 0, stages: {}, asks: {}, asked: 0, comments: [], regions: new Set(), lastMonth: "" };
+      byRut.set(r.rut, c);
     }
-    c.names.set(r.company, (c.names.get(r.company) || 0) + 1);
     c.n++;
     c[r.outcome]++;
     if (r.outcome === "nunca") c.stages[r.stage] = (c.stages[r.stage] || 0) + 1;
+    if (r.asks.length) c.asked++;
+    for (const a of r.asks) c.asks[a] = (c.asks[a] || 0) + 1;
+    if (r.comment) c.comments.push(r.comment);
     c.regions.add(r.region);
     if (r.month > c.lastMonth) c.lastMonth = r.month;
-    if (!r.example) c.example = false;
   }
-  return [...byKey.values()].map((c) => ({
-    ...c,
-    // El nombre que mas personas escribieron representa a la empresa.
-    name: [...c.names.entries()].sort((a, b) => b[1] - a[1])[0][0],
-    ir: c.atiempo / c.n,
-    ghost: c.nunca / c.n
-  }));
+  return [...byRut.values()].map((c) => ({ ...c, ir: c.atiempo / c.n, ghost: c.nunca / c.n, label: companyLabel(c.rut) }));
 }
 
 function irLevel(ir) {
@@ -322,8 +397,8 @@ function ring(ratio) {
   const c = 2 * Math.PI * 30;
   return html`<svg class="ir-ring" viewBox="0 0 76 76" role="img" aria-label="Índice de Respuesta ${p} por ciento">
     <circle cx="38" cy="38" r="30" fill="none" stroke="var(--line)" stroke-width="7"/>
-    <circle cx="38" cy="38" r="30" fill="none" stroke="${lvl.color}" stroke-width="7" stroke-linecap="round"
-      stroke-dasharray="${(c * p / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/>
+    ${p > 0 ? html`<circle cx="38" cy="38" r="30" fill="none" stroke="${lvl.color}" stroke-width="7" stroke-linecap="round"
+      stroke-dasharray="${(c * p / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/>` : ""}
     <text x="38" y="43" text-anchor="middle" font-size="15" fill="var(--ink)">${p}%</text>
   </svg>`;
 }
@@ -364,37 +439,46 @@ function renderStats() {
     : "Aún no hay reportes. El tuyo puede ser el primero.";
 }
 
-function stageBars(c) {
-  const total = c.nunca;
-  if (!total) return html`<p class="small">Ninguna persona reportó quedar sin respuesta.</p>`;
-  const rows = Object.entries(c.stages).sort((a, b) => b[1] - a[1]);
-  return html`<div class="stage-bars">${rows.map(([k, v]) => html`<div class="stage-row">
-      <span>${STAGES[k]}</span>
-      <span class="stage-track"><span class="stage-fill" data-w="${(v / total * 100).toFixed(1)}"></span></span>
+/* Barras horizontales: cada fila es una etapa o una peticion, con su conteo sobre el total. */
+function bars(entries, total, labels, cls) {
+  return html`<div class="stage-bars">${entries.sort((a, b) => b[1] - a[1]).map(([k, v]) => html`<div class="stage-row">
+      <span>${labels[k]}</span>
+      <span class="stage-track"><span class="stage-fill ${cls}" data-w="${(v / total * 100).toFixed(1)}"></span></span>
       <span class="mono">${v} de ${total}</span>
     </div>`)}</div>`;
 }
 
-function companyCard(c) {
-  const initials = c.name.split(" ").filter((w) => w.length > 2).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || c.name[0].toUpperCase();
-  const regions = [...c.regions].slice(0, 3).join(", ") + (c.regions.size > 3 ? ` y ${c.regions.size - 3} más` : "");
-  const head = html`<div class="co-head">
-      <div class="mono-logo" aria-hidden="true">${initials}</div>
-      <div class="minw-0">
-        <h3>${c.name}${c.example ? html` <span class="sample-tag">ejemplo</span>` : ""}</h3>
-        <p class="small">${c.n} ${c.n === 1 ? "reporte" : "reportes"} · ${regions} · último en ${monthLabel(c.lastMonth)}</p>
-      </div>
-      ${c.n >= K_ANON ? ring(c.ir) : ""}
-    </div>`;
+function initials(name) {
+  if (/^[A-Z]{2,4}$/.test(name)) return name;  // Siglas como BCI o CCU se muestran completas.
+  return name.split(" ").filter((w) => w.length > 2 || /^[A-Z]{2,}$/.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || name[0].toUpperCase();
+}
 
+function companyHead(rut, sub, ringValue) {
+  const lb = companyLabel(rut);
+  return html`<div class="co-head">
+      <div class="mono-logo" aria-hidden="true">${initials(lb.title)}</div>
+      <div class="minw-0">
+        <h3>${lb.title}</h3>
+        <p class="small">${lb.legal ? lb.legal + " · " : ""}${lb.meta}</p>
+        <p class="small">${sub}</p>
+      </div>
+      ${ringValue === null ? "" : ring(ringValue)}
+    </div>`;
+}
+
+function companyCard(c) {
+  const regions = [...c.regions].slice(0, 3).join(", ") + (c.regions.size > 3 ? ` y ${c.regions.size - 3} más` : "");
+  const sub = `${c.n} ${c.n === 1 ? "reporte" : "reportes"} · ${regions} · último en ${monthLabel(c.lastMonth)}`;
   if (c.n < K_ANON) {
-    return html`<article class="card co-card">${head}
+    return html`<article class="card co-card">${companyHead(c.rut, sub, null)}
       <p class="locked">Esta empresa tiene ${c.n} ${c.n === 1 ? "reporte" : "reportes"}. El detalle se publica desde ${K_ANON}, para que nadie pueda saber quién reportó.</p>
-      <a class="btn sm ghost" href="#reportar" data-report="${c.name}">¿Te pasó con esta empresa? Reporta</a>
+      <a class="btn sm ghost" href="#reportar" data-report-rut="${c.rut}">¿Te pasó con esta empresa? Reporta</a>
     </article>`;
   }
   const lvl = irLevel(c.ir);
-  return html`<article class="card co-card">${head}
+  // Los comentarios se muestran sin asociarlos a la etapa, region ni mes de su reporte, para no identificar a nadie.
+  const quotes = c.comments.slice(0, 3);
+  return html`<article class="card co-card">${companyHead(c.rut, sub, c.ir)}
     <div class="chips-row">
       <span class="pill ${lvl.cls}">${lvl.label}</span>
       ${c.n < PRELIMINAR ? html`<span class="pill info">Preliminar: menos de ${PRELIMINAR} reportes</span>` : ""}
@@ -404,16 +488,34 @@ function companyCard(c) {
       <div class="metric"><b>${pct(c.tarde / c.n)}</b><span>Respondió tarde</span></div>
       <div class="metric"><b>${pct(c.ghost)}</b><span>Nunca respondió</span></div>
     </div>
-    <div class="stack-xs">
-      <h4 class="eyebrow">Dónde dejan de responder</h4>
-      ${stageBars(c)}
+    <div class="co-cols">
+      <div class="stack-xs">
+        <h4 class="eyebrow">Dónde dejan de responder</h4>
+        ${c.nunca ? bars(Object.entries(c.stages), c.nunca, STAGES, "") : html`<p class="small">Ninguna persona reportó quedar sin respuesta.</p>`}
+      </div>
+      ${c.asked ? html`<div class="stack-xs">
+        <h4 class="eyebrow">Lo que les habría bastado</h4>
+        ${bars(Object.entries(c.asks), c.asked, ASKS, "ask")}
+      </div>` : ""}
     </div>
-    <a class="btn sm ghost" href="#reportar" data-report="${c.name}">Reportar mi experiencia con esta empresa</a>
+    ${quotes.length ? html`<div class="stack-xs">
+      <h4 class="eyebrow">En sus palabras</h4>
+      ${quotes.map((q) => html`<blockquote class="quote">${q}</blockquote>`)}
+    </div>` : ""}
+    <a class="btn sm ghost" href="#reportar" data-report-rut="${c.rut}">Reportar mi experiencia con esta empresa</a>
+  </article>`;
+}
+
+/* Empresa del registro que nadie ha reportado: se muestra para invitar al primer reporte. */
+function unreportedCard(it) {
+  return html`<article class="card co-card">${companyHead(it.rut, "Sin reportes todavía", null)}
+    <p class="locked">Nadie ha reportado a esta empresa. Si te dejaron sin respuesta, tu reporte será el primero.</p>
+    <a class="btn sm" href="#reportar" data-report-rut="${it.rut}">Reportar a ${it.brand || it.name}</a>
   </article>`;
 }
 
 function renderCompanies() {
-  const q = companyKey($("#coQ").value);
+  const typed = $("#coQ").value.trim();
   const region = $("#coRegion").value;
   const sort = $("#coSort").value;
   const sorters = {
@@ -422,28 +524,32 @@ function renderCompanies() {
     ghost: (a, b) => (b.n >= K_ANON) - (a.n >= K_ANON) || b.ghost - a.ghost,
     ir: (a, b) => (b.n >= K_ANON) - (a.n >= K_ANON) || b.ir - a.ir
   };
-  const list = companies
-    .filter((c) => (!q || c.key.includes(q)) && (!region || c.regions.has(region)))
-    .sort(sorters[sort] || sorters.n);
+  let list = companies.filter((c) => !region || c.regions.has(region));
+  let extra = [];
+  if (typed) {
+    // Se busca en el registro completo; las empresas con reportes salen primero.
+    const hits = searchCatalog(typed, 12);
+    const byRut = new Map(list.map((c) => [c.rut, c]));
+    list = hits.filter((h) => byRut.has(h.rut)).map((h) => byRut.get(h.rut));
+    extra = region ? [] : hits.filter((h) => !byRut.has(h.rut)).slice(0, 4);
+  } else {
+    list.sort(sorters[sort] || sorters.n);
+  }
 
   const box = $("#coList");
-  if (!list.length) {
-    const typed = $("#coQ").value.trim();
+  if (!list.length && !extra.length) {
     setHTML(box, html`<div class="card empty">
       ${typed
-        ? html`<p>Nadie ha reportado a <b>${typed}</b> todavía.</p><p class="small">Si te dejaron sin respuesta en esta empresa, tu reporte será el primero.</p>
-               <a class="btn" href="#reportar" data-report="${typed}">Reportar a ${typed}</a>`
-        : html`<p>Aún no hay reportes en esta región.</p><a class="btn" href="#reportar">Hacer el primer reporte</a>`}
+        ? (catalog.ready
+          ? html`<p>No encontramos <b>${typed}</b> en el registro.</p><p class="small">Prueba con la razón social, la marca o el RUT. Por ahora el registro incluye empleadores de 50 trabajadores o más.</p>`
+          : html`<p>Cargando el registro de empresas...</p>`)
+        : html`<p>Aún no hay reportes${region ? " en esta región" : ""}.</p><a class="btn" href="#reportar">Hacer el primer reporte</a>`}
     </div>`);
     return;
   }
-  setHTML(box, html`${list.slice(0, 60).map(companyCard)}`);
+  setHTML(box, html`${list.slice(0, 60).map(companyCard)}${extra.map(unreportedCard)}`);
   // Anchos de las barras por CSSOM (permitido por la CSP), nunca como atributo style en el HTML.
   box.querySelectorAll(".stage-fill[data-w]").forEach((el) => { el.style.width = el.dataset.w + "%"; });
-}
-
-function renderCompanyOptions() {
-  setHTML($("#rpCompanyList"), html`${companies.slice(0, 300).map((c) => html`<option value="${c.name}"></option>`)}`);
 }
 
 function renderMine() {
@@ -453,7 +559,7 @@ function renderMine() {
     return;
   }
   setHTML(box, html`${mine.items.map((it) => html`<div class="my-report">
-    <span><b>${it.company}</b><br><span class="small">${it.month ? monthLabel(it.month) : ""}</span></span>
+    <span><b>${companyLabel(it.rut).title}</b><br><span class="small">${it.month ? monthLabel(it.month) : ""}</span></span>
     <button class="btn sm link" type="button" data-del="${it.id}">Borrar</button>
   </div>`)}`);
 }
@@ -462,7 +568,7 @@ function renderAll() {
   companies = aggregate(reports);
   renderStats();
   renderCompanies();
-  renderCompanyOptions();
+  renderMine();
 }
 
 /* =====================================================================
@@ -475,9 +581,9 @@ function fillSelect(sel, items) {
   items.forEach((v) => el.add(new Option(v, v)));
 }
 
-function buildChoices(boxSel, name, entries) {
+function buildChoices(boxSel, name, entries, type = "radio") {
   setHTML($(boxSel), html`${entries.map(([value, label, help]) => html`<label class="choice">
-      <input type="radio" name="${name}" value="${value}" required>
+      <input type="${type === "checkbox" ? "checkbox" : "radio"}" name="${name}" value="${value}" ${type === "radio" ? new SafeHTML("required") : ""}>
       <span>${label}${help ? html`<small>${help}</small>` : ""}</span>
     </label>`)}`);
 }
@@ -487,10 +593,15 @@ function selected(name) {
   return el ? el.value : "";
 }
 
-/* Si respondieron a tiempo no hay "etapa del silencio": la pregunta se oculta. */
+function selectedAll(name) {
+  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((el) => el.value);
+}
+
+/* Si respondieron a tiempo no hay "etapa del silencio" ni "que te habria bastado": se ocultan. */
 function syncStageVisibility() {
   const hide = selected("outcome") === "atiempo";
   $("#rpStageGroup").hidden = hide;
+  $("#rpAskGroup").hidden = hide;
   document.querySelectorAll('input[name="stage"]').forEach((i) => { i.required = !hide; });
 }
 
@@ -501,8 +612,92 @@ function formError(msg) {
   if (msg) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
-function prefillReport(company, stage) {
-  if (company) $("#rpCompany").value = company;
+/* ---------- Combobox de empresa (patron ARIA 1.2: flechas, Enter, Escape) ---------- */
+const combo = { input: null, list: null, results: [], active: -1, rut: "" };
+
+function comboOpen(open) {
+  combo.list.hidden = !open;
+  combo.input.setAttribute("aria-expanded", String(open));
+  if (!open) combo.input.removeAttribute("aria-activedescendant");
+}
+
+function comboRender() {
+  const q = combo.input.value;
+  combo.results = searchCatalog(q, 8);
+  combo.active = combo.results.length ? 0 : -1;
+  if (norm(q).length < 2) { comboOpen(false); return; }
+  if (!catalog.ready) {
+    setHTML(combo.list, html`<li class="combo-empty">${catalog.failed ? "No pudimos cargar el registro de empresas. Recarga la página." : "Cargando el registro de empresas..."}</li>`);
+  } else if (!combo.results.length) {
+    setHTML(combo.list, html`<li class="combo-empty">No está en el registro. Prueba con la razón social o el RUT. Incluimos empleadores de 50 trabajadores o más.</li>`);
+  } else {
+    setHTML(combo.list, html`${combo.results.map((it, i) => html`<li role="option" id="opt-${i}" data-i="${i}" aria-selected="${String(i === combo.active)}">
+        <b>${it.brand || it.name}</b>
+        <span class="small">${it.brand ? it.name + " · " : ""}${it.rubro} · ${it.region} · RUT ${formatRut(it.rut)}</span>
+      </li>`)}`);
+    combo.input.setAttribute("aria-activedescendant", "opt-0");
+  }
+  comboOpen(true);
+}
+
+function comboMove(delta) {
+  if (!combo.results.length) return;
+  combo.active = (combo.active + delta + combo.results.length) % combo.results.length;
+  combo.list.querySelectorAll("[role=option]").forEach((li, i) => li.setAttribute("aria-selected", String(i === combo.active)));
+  combo.input.setAttribute("aria-activedescendant", "opt-" + combo.active);
+  const li = combo.list.querySelector("#opt-" + combo.active);
+  if (li) li.scrollIntoView({ block: "nearest" });
+}
+
+function comboPick(rut) {
+  const it = catalog.byRut.get(rut);
+  if (!it) return;
+  combo.rut = rut;
+  $("#rpPickedName").textContent = it.brand ? `${it.brand} (${it.name})` : it.name;
+  $("#rpPickedMeta").textContent = ` ${it.rubro} · RUT ${formatRut(it.rut)}`;
+  $("#rpPicked").hidden = false;
+  comboOpen(false);
+  combo.input.value = "";
+  // El foco pasa al boton "Cambiar" antes de ocultar el campo: un elemento oculto nunca debe conservar el foco.
+  if (document.activeElement === combo.input) $("#rpPickedClear").focus();
+  combo.input.hidden = true;
+}
+
+function comboClear() {
+  combo.rut = "";
+  $("#rpPicked").hidden = true;
+  combo.input.hidden = false;
+  combo.input.focus();
+}
+
+function setupCombo() {
+  combo.input = $("#rpCompany");
+  combo.list = $("#rpCompanyResults");
+  combo.input.addEventListener("input", comboRender);
+  combo.input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); if (combo.list.hidden) comboRender(); else comboMove(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); comboMove(-1); }
+    else if (e.key === "Enter" && !combo.list.hidden && combo.active >= 0) { e.preventDefault(); comboPick(combo.results[combo.active].rut); }
+    else if (e.key === "Escape") comboOpen(false);
+  });
+  // mousedown en vez de click: se ejecuta antes de que el input pierda el foco y se cierre la lista.
+  combo.list.addEventListener("mousedown", (e) => {
+    const li = e.target.closest("[role=option]");
+    if (li) { e.preventDefault(); comboPick(combo.results[Number(li.dataset.i)].rut); }
+  });
+  // Al salir del campo la lista se cierra, salvo que el foco haya vuelto a el en ese intervalo.
+  combo.input.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== combo.input) comboOpen(false); }, 120));
+  $("#rpPickedClear").addEventListener("click", comboClear);
+}
+
+/* Abre el formulario con la empresa elegida (por RUT) o con el texto ya escrito en el buscador. */
+function prefillReport({ rut, text, stage } = {}) {
+  if (rut && catalog.byRut.has(rut)) comboPick(rut);
+  else if (text) {
+    comboClear();
+    combo.input.value = text;
+    setTimeout(comboRender, 50);
+  }
   if (stage) {
     const r = document.querySelector(`input[name="stage"][value="${stage}"]`);
     if (r) r.checked = true;
@@ -516,30 +711,35 @@ async function submitReport(e) {
   if (!canWrite) return formError("Tu nivel de acceso permite ver los reportes, pero no enviar uno nuevo.");
 
   const email = $("#rpEmail").value.trim().toLowerCase();
-  const company = cleanCompanyName($("#rpCompany").value);
+  const rut = combo.rut;
   const outcome = selected("outcome");
+  const comment = $("#rpComment").value.trim();
   const report = {
-    company, region: $("#rpRegion").value, area: $("#rpArea").value, channel: $("#rpChannel").value,
+    rut, region: $("#rpRegion").value, area: $("#rpArea").value, channel: $("#rpChannel").value,
     outcome, stage: outcome === "atiempo" ? null : selected("stage"), month: $("#rpMonth").value,
+    asks: outcome === "atiempo" ? [] : selectedAll("ask"), comment,
     // Fecha de creacion redondeada al dia: una hora exacta ayudaria a identificar a quien reporta.
-    createdAt: Math.floor(Date.now() / 86400000) * 86400000, v: 1
+    createdAt: Math.floor(Date.now() / 86400000) * 86400000, v: 2
   };
 
   // Validacion con mensajes concretos: que esta mal y como arreglarlo.
   if (!EMAIL_RE.test(email) || email.length > 254) return formError("Escribe un correo válido, por ejemplo nombre@correo.cl.");
-  if (!company) return formError("Escribe el nombre de la empresa usando letras, números y puntuación común.");
+  if (!rut) return formError("Busca la empresa y elígela de la lista. Puedes escribir la marca, la razón social o el RUT.");
   if (!report.region || !report.area || !report.channel) return formError("Elige la región, el área y cómo postulaste.");
   if (!report.month) return formError("Indica el mes del último contacto.");
   if (report.month > thisMonth()) return formError("El mes del último contacto no puede estar en el futuro.");
   if (!outcome) return formError("Indica si te respondieron.");
   if (outcome !== "atiempo" && !report.stage) return formError("Indica en qué parte del proceso dejaron de hablarte.");
+  const commentError = checkComment(comment, rut);
+  if (commentError) return formError(commentError);
   if (!$("#rpTruth").checked) return formError("Confirma que es tu experiencia real para enviar el reporte.");
   if (!sanitizeReport("nuevo", report)) return formError("Revisa los datos del reporte.");
+  if (!comment) delete report.comment;
 
   // Controles de abuso del lado del cliente. En produccion se repiten en el servidor.
-  const key = companyKey(company);
-  if (mine.items.some((it) => it.key === key && it.month === report.month)) {
-    return formError(`Ya reportaste a ${company} en ${monthLabel(report.month)}. Puedes borrar ese reporte desde "Mis reportes" si quieres corregirlo.`);
+  const name = companyLabel(rut).title;
+  if (mine.items.some((it) => it.rut === rut && it.month === report.month)) {
+    return formError(`Ya reportaste a ${name} en ${monthLabel(report.month)}. Puedes borrar ese reporte desde "Mis reportes" si quieres corregirlo.`);
   }
   const lastDay = mine.items.filter((it) => Date.now() - it.at < 86400000).length;
   if (lastDay >= DAILY_LIMIT) return formError(`Puedes enviar hasta ${DAILY_LIMIT} reportes cada 24 horas.`);
@@ -549,15 +749,17 @@ async function submitReport(e) {
   btn.textContent = "Enviando...";
   try {
     const id = await dataStore.add(report);
-    mine = { email, items: [{ id, key, company, month: report.month, at: Date.now() }, ...mine.items] };
+    mine = { email, items: [{ id, rut, month: report.month, at: Date.now() }, ...mine.items] };
     await dataStore.saveMine(mine);
     renderMine();
     e.target.reset();
+    comboClear();
     $("#rpEmail").value = email;
     $("#rpMonth").value = thisMonth();
+    $("#rpCommentCount").textContent = "0";
     syncStageVisibility();
-    showToast(`Reporte enviado. Gracias: ahora ${company} suma un dato más.`);
-    $("#coQ").value = company;
+    showToast(`Reporte enviado. Gracias: ahora ${name} suma un dato más.`);
+    $("#coQ").value = name;
     location.hash = "empresas";
     renderCompanies();
   } catch (err) {
@@ -595,10 +797,10 @@ $("#myReports").addEventListener("click", async (e) => {
   }
 });
 
-/* Cualquier enlace con data-report lleva al formulario con la empresa ya escrita. */
+/* Cualquier enlace con data-report-rut lleva al formulario con la empresa ya elegida. */
 document.addEventListener("click", (e) => {
-  const a = e.target.closest("a[data-report]");
-  if (a) prefillReport(a.dataset.report);
+  const a = e.target.closest("a[data-report-rut]");
+  if (a) prefillReport({ rut: a.dataset.reportRut });
 });
 
 /* =====================================================================
@@ -753,7 +955,7 @@ $("#trList").addEventListener("click", (e) => {
     local.set(TR_KEY, apps);
     renderApps();
     location.hash = "reportar";
-    prefillReport(a.co, a.stage);
+    prefillReport({ text: a.co, stage: a.stage });
     const nunca = document.querySelector('input[name="outcome"][value="nunca"]');
     if (nunca) { nunca.checked = true; syncStageVisibility(); }
     $("#rpMonth").value = a.date.slice(0, 7);
@@ -890,7 +1092,7 @@ async function connect() {
     }
   }
   start(new LocalStore());
-  setMode("Modo demostración: los reportes se guardan solo en este navegador y las empresas marcadas como ejemplo son ficticias.", false);
+  setMode("Modo demostración: los reportes que envíes se guardan solo en este navegador y nadie más los ve.", false);
 }
 
 /* ---------- Arranque ---------- */
@@ -901,6 +1103,9 @@ fillSelect("#coRegion", REGIONS);
 TR_STAGES.forEach((k) => $("#trStage").add(new Option(STAGES[k].replace("Después de ", "").replace(/^\w/, (c) => c.toUpperCase()), k)));
 buildChoices("#rpOutcome", "outcome", Object.entries(OUTCOMES).map(([k, o]) => [k, o.label, o.help]));
 buildChoices("#rpStage", "stage", Object.entries(STAGES).map(([k, label]) => [k, label, ""]));
+buildChoices("#rpAsks", "ask", Object.entries(ASKS).map(([k, label]) => [k, label, ""]), "checkbox");
+setupCombo();
+$("#rpComment").addEventListener("input", () => { $("#rpCommentCount").textContent = String($("#rpComment").value.length); });
 $("#rpOutcome").addEventListener("change", syncStageVisibility);
 $("#rpForm").addEventListener("submit", submitReport);
 $("#rpMonth").value = thisMonth();
@@ -916,4 +1121,5 @@ renderApps();
 renderAll();
 renderMine();
 showView(location.hash.slice(1));
+loadCatalog().then(() => { renderAll(); if (!combo.input.hidden && combo.input.value) comboRender(); });
 connect();
