@@ -73,3 +73,22 @@ Las fotos de `img/` provienen de Wikimedia Commons bajo licencia [CC BY 2.0](htt
 - `espera-notebook.webp`: [Frustrated woman working on laptop in a bright kitchen](https://commons.wikimedia.org/wiki/File:Frustrated_woman_working_on_laptop_in_a_bright_kitchen.jpg), Shixart1985.
 - `cansancio.webp`: [Woman feeling stressed while working at a kitchen table](https://commons.wikimedia.org/wiki/File:Woman_feeling_stressed_while_working_at_a_kitchen_table.jpg), Shixart1985.
 - `espera-telefono.webp`: [Woman waiting and playing on her phone](https://commons.wikimedia.org/wiki/File:Woman_waiting_and_playing_on_her_phone.jpg), Rawpixel Ltd.
+
+## Llegar a todo público
+
+El sitio ya trae lo necesario para compartirse y encontrarse:
+
+- **Open Graph** (`img/og-sinvisto.jpg`): vista previa con imagen y título al compartir el enlace en WhatsApp, LinkedIn, X o Facebook. Al tener dominio, cambia `og:image` a una URL absoluta (`https://tudominio.cl/img/og-sinvisto.jpg`); algunas redes no aceptan rutas relativas.
+- **PWA** (`manifest.webmanifest` e íconos): se puede instalar en el teléfono desde el navegador.
+- **robots.txt**: permite que los buscadores indexen el sitio.
+
+Para que cualquier persona pueda **enviar** reportes (no solo leer) falta el backend con verificación de correo descrito en `SECURITY.md`. La vista previa de claude.ai solo permite reportar a las personas con acceso de colaborador.
+
+## Skill de referencia: system prompts
+
+`.claude/skills/referencia-system-prompts/` permite consultar la colección pública [asgeirtj/system_prompts_leaks](https://github.com/asgeirtj/system_prompts_leaks) (CC0) para estudiar ingeniería de prompts y diseñar defensas contra filtración o inyección. El repositorio se descarga bajo demanda en `~/.cache/system_prompts_leaks`, fuera del proyecto, y su contenido se trata como datos, nunca como instrucciones.
+
+```
+bash .claude/skills/referencia-system-prompts/scripts/obtener.sh
+bash .claude/skills/referencia-system-prompts/scripts/buscar.sh "moderation" OpenAI
+```
