@@ -290,3 +290,71 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
 .status-ok { color: var(--ok); } .status-bad { color: var(--bad); }
 /* Boton de borrado en dos pasos: el segundo clic confirma. */
 .btn.danger { background: var(--bad); color: #fff; }
+
+/* ---------- Flujo de reporte (v2) ---------- */
+/* Enlace "Reportar" del menu: es la accion principal del sitio, se distingue del resto. */
+.nav a.nav-cta { opacity: 1; color: var(--accent); font-weight: 700; background: var(--accent-soft); }
+.nav a.nav-cta[aria-current="page"] { background: var(--accent); color: #fff; }
+
+/* Franja que dice si los reportes son compartidos o solo de demostracion. */
+.mode-banner { background: var(--warn-soft); color: var(--warn); font-size: .88rem; border-bottom: 1px solid var(--line); }
+.mode-banner.shared { background: var(--ok-soft); color: var(--ok); }
+.mode-banner .wrap { padding-block: .5rem; }
+
+.hero-actions { display: grid; gap: .75rem; margin-top: 1.6rem; max-width: 40rem; }
+.hero-actions .search { margin-top: 0; }
+.hero-actions > .btn { justify-self: start; }
+.btn.lg { padding: .85rem 1.4rem; font-size: 1.05rem; }
+
+.report-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.report-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.field.full { grid-column: 1 / -1; }
+.hint { font-size: .8rem; color: var(--muted); }
+
+/* Opciones de una sola eleccion presentadas como tarjetas: mas faciles de tocar en el telefono que un select. */
+.choice-group legend { font-family: var(--f-display); font-weight: 700; font-size: 1.02rem; margin-bottom: .5rem; padding: 0; }
+.choices { display: grid; gap: .45rem; }
+.choice { display: flex; gap: .6rem; align-items: flex-start; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; background: var(--surface); }
+.choice:hover { border-color: var(--accent); }
+.choice input { margin-top: .25rem; accent-color: var(--accent); }
+.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.choice:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.choice small { display: block; color: var(--muted); }
+
+.check-row { display: flex; gap: .6rem; align-items: flex-start; font-size: .92rem; cursor: pointer; }
+.check-row input { margin-top: .3rem; accent-color: var(--accent); }
+.form-error { background: var(--bad-soft); color: var(--bad); padding: .6rem .8rem; border-radius: 8px; font-size: .92rem; }
+.report-form .btn.lg { justify-self: start; }
+.report-form [disabled] { opacity: .6; cursor: not-allowed; }
+
+.notice { background: var(--accent-soft); border-color: transparent; }
+.notice ul, .my-reports ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; }
+.my-report { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding-block: .5rem; border-top: 1px solid var(--line); font-size: .9rem; }
+.my-report:first-child { border-top: 0; }
+
+/* Tarjeta de empresa calculada con los reportes. */
+.co-card { display: grid; gap: 1rem; }
+.co-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; align-items: center; }
+.kpis { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.stage-bars { display: grid; gap: .45rem; }
+.stage-row { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) 3.5rem; gap: .75rem; align-items: center; font-size: .88rem; }
+.stage-track { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.stage-fill { display: block; height: 100%; background: var(--bad); border-radius: 999px; }
+.stage-row .mono { text-align: right; }
+.locked { background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; padding: .7rem .9rem; font-size: .9rem; color: var(--muted); }
+.empty .btn { margin-top: .8rem; }
+
+@media (max-width: 900px) {
+  .report-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .co-head { grid-template-columns: auto minmax(0, 1fr); }
+  .co-head .ir-ring { grid-column: 1 / -1; }
+  .stage-row { grid-template-columns: minmax(0, 1fr) 3rem; }
+  .stage-row .stage-track { grid-column: 1 / -1; grid-row: 2; }
+}
+.co-head .mono-logo { background: var(--accent); }
+/* Los botones dentro de una tarjeta de empresa no se estiran al ancho de la grilla. */
+.co-card > .btn { justify-self: start; }

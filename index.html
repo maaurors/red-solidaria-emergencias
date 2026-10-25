@@ -10,7 +10,7 @@
 <meta name="color-scheme" content="light">
 <title>SinVisto Chile</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Plataforma chilena de transparencia laboral: reseñas, sueldos líquidos, entrevistas y el Índice de Respuesta para terminar con el ghosting.">
+<meta name="description" content="Reporta de forma anónima a las empresas que te dejaron sin respuesta en un proceso de selección y consulta su Índice de Respuesta.">
 <!-- Precarga de las dos fuentes que se ven primero en la portada. -->
 <link rel="preload" href="fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/atkinson-hyperlegible-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -30,15 +30,20 @@
     </a>
     <nav class="nav" aria-label="Secciones">
       <a href="#inicio">Inicio</a>
-      <a href="#empresas">Empresas</a>
-      <a href="#sueldos">Sueldos</a>
-      <a href="#entrevistas">Entrevistas</a>
+      <a href="#empresas">Buscar empresa</a>
+      <a href="#reportar" class="nav-cta">Reportar</a>
       <a href="#postulaciones">Mis postulaciones</a>
+      <a href="#sueldos">Sueldo líquido</a>
       <a href="#compromiso">Para empresas</a>
-      <a href="#legal">Leyes y políticas</a>
+      <a href="#legal">Leyes y privacidad</a>
     </nav>
   </div>
 </header>
+
+<!-- Aviso del modo de datos: compartido (todos ven los reportes) o demostracion (solo este navegador). -->
+<div class="mode-banner" id="modeBanner" hidden>
+  <div class="wrap"><p id="modeText"></p></div>
+</div>
 
 <main id="app">
 
@@ -49,18 +54,21 @@
       <div>
         <p class="eyebrow">Transparencia laboral hecha en Chile</p>
         <h1 class="mt-s">Postulaste. Te entrevistaron. <em>Y te dejaron en visto.</em></h1>
-        <p class="lead mt-l">En SinVisto las empresas se miden por algo que ninguna otra plataforma mide: si le responden a la gente. Reseñas, sueldos líquidos reales y el Índice de Respuesta de cada empleador en Chile.</p>
-        <form class="search" id="heroSearch" role="search">
-          <label for="heroQ" class="small sr-only">Buscar empresa o cargo</label>
-          <input id="heroQ" maxlength="80" type="search" placeholder="Busca una empresa, cargo o región" autocomplete="off">
-          <button class="btn" type="submit">Buscar</button>
-        </form>
-        <div class="hero-stats" aria-label="Cifras de ejemplo">
-          <div><b>62%</b><span>de postulantes entrevistados<br>nunca recibe respuesta*</span></div>
-          <div><b>10</b><span>días hábiles: plazo del<br>Compromiso SinVisto</span></div>
-          <div><b>$0</b><span>costo para leer todo.<br>Sin muro de contenido.</span></div>
+        <p class="lead mt-l">Cuéntalo en un minuto, de forma anónima. Cada reporte suma a la métrica pública de la empresa, para que la próxima persona sepa si ahí responden.</p>
+        <div class="hero-actions">
+          <a class="btn lg" href="#reportar">Reportar un ghosting</a>
+          <form class="search" id="heroSearch" role="search">
+            <label for="heroQ" class="sr-only">Buscar una empresa</label>
+            <input id="heroQ" maxlength="80" type="search" placeholder="Busca una empresa" autocomplete="off">
+            <button class="btn ghost" type="submit">Buscar</button>
+          </form>
         </div>
-        <p class="small mt-m">*Cifra ilustrativa del prototipo. Se reemplaza por datos reales al lanzar.</p>
+        <div class="hero-stats" aria-live="polite">
+          <div><b id="statReports">0</b><span>reportes<br>recibidos</span></div>
+          <div><b id="statCompanies">0</b><span>empresas<br>reportadas</span></div>
+          <div><b id="statGhost">—</b><span>nunca recibió<br>respuesta</span></div>
+        </div>
+        <p class="small mt-m" id="statNote">Cifras calculadas en vivo con los reportes de la comunidad.</p>
       </div>
       <!-- Collage de fotografias reales (licencia CC BY 2.0, creditos en el pie). Las etiquetas imitan avisos de chat para contar el ghosting. -->
       <div>
@@ -87,12 +95,22 @@
   </div>
 
   <div class="wrap stack-xxl mt-xxl">
+    <div class="stack-ml">
+      <div class="view-head m-0"><p class="eyebrow">Cómo funciona</p><h2>Del silencio a un dato público</h2></div>
+      <ol class="how">
+        <li class="card"><h3>Reportas</h3><p class="small mt-2xs">Empresa, región, área y la etapa en que dejaron de hablarte. Eliges de listas: no escribes texto libre.</p></li>
+        <li class="card"><h3>Tu correo queda privado</h3><p class="small mt-2xs">Se guarda aparte, en tu espacio personal. El reporte público no lleva tu correo ni tu nombre.</p></li>
+        <li class="card"><h3>Se suma a la métrica</h3><p class="small mt-2xs">Con 3 reportes o más se publica el detalle de la empresa: así nadie puede adivinar quién reportó.</p></li>
+        <li class="card"><h3>Cualquiera la consulta</h3><p class="small mt-2xs">Antes de postular, buscas la empresa y ves si responde, si deja en visto y en qué etapa.</p></li>
+      </ol>
+    </div>
+
     <div class="grid g2 gap-l items-start">
       <div class="stack-s">
         <p class="eyebrow">La métrica que faltaba</p>
         <h2>Índice de Respuesta</h2>
-        <p>Porcentaje de personas entrevistadas que recibieron una respuesta final (sí o no) dentro de 10 días hábiles después de su última entrevista. Lo calculamos con los reportes verificados de los propios postulantes y lo publicamos en el perfil de cada empresa.</p>
-        <p class="small">Fórmula: IR = respuestas finales en plazo ÷ procesos con entrevista reportados en los últimos 12 meses. Se publica solo con 15 reportes o más, para que nadie pueda ser identificado.</p>
+        <p>Porcentaje de procesos reportados en que la empresa entregó una respuesta final, positiva o negativa, dentro de 10 días hábiles.</p>
+        <p class="small">IR = reportes "me respondieron a tiempo" ÷ total de reportes de la empresa. Se muestra desde 3 reportes y se marca como preliminar hasta llegar a 15.</p>
         <div class="ir-scale">
           <div class="ok"><b>80–100%</b>Responde</div>
           <div class="warn"><b>50–79%</b>Irregular</div>
@@ -104,44 +122,32 @@
           <thead><tr><th>Tema</th><th>Plataformas globales</th><th>SinVisto</th></tr></thead>
           <tbody>
             <tr><td>Ghosting</td><td>No se mide</td><td>Índice de Respuesta público por empresa</td></tr>
-            <tr><td>Sueldos</td><td>Bruto, a veces en dólares</td><td>Bruto y líquido en CLP, con AFP, salud y cesantía</td></tr>
-            <tr><td>Acceso</td><td>Debes aportar para seguir leyendo</td><td>Lectura libre; aportar suma, no desbloquea</td></tr>
-            <tr><td>Ofertas</td><td>Se publican tal cual</td><td>Se revisan contra el art. 2 del Código del Trabajo</td></tr>
-            <tr><td>Datos personales</td><td>Normativa extranjera</td><td>Ley 21.719 y derechos ARCOP en Chile</td></tr>
-            <tr><td>Tu seguimiento</td><td>No existe</td><td>Panel de postulaciones con alertas de plazo</td></tr>
+            <tr><td>Dónde se corta</td><td>No existe</td><td>Etapa exacta en que la empresa deja de responder</td></tr>
+            <tr><td>Anonimato</td><td>Reseñas con texto que delatan</td><td>Datos estructurados y detalle solo desde 3 reportes</td></tr>
+            <tr><td>Acceso</td><td>Debes aportar para seguir leyendo</td><td>Lectura libre</td></tr>
+            <tr><td>Datos personales</td><td>Normativa extranjera</td><td>Ley 21.719 y derecho a borrar tus reportes</td></tr>
           </tbody>
         </table>
       </div>
     </div>
-
-    <div class="stack-ml">
-      <div class="view-head m-0"><p class="eyebrow">Cómo funciona</p><h2>Del silencio a un dato público</h2></div>
-      <ol class="how">
-        <li class="card"><h3>Registras tu postulación</h3><p class="small mt-2xs">Empresa, cargo y fecha de tu última entrevista. Queda en tu panel, solo visible para ti.</p></li>
-        <li class="card"><h3>Contamos los días hábiles</h3><p class="small mt-2xs">Al día 7 te sugerimos un mensaje de seguimiento cordial. Al día 10 se cumple el plazo.</p></li>
-        <li class="card"><h3>Reportas el resultado</h3><p class="small mt-2xs">Respondieron, no respondieron, o respondieron tarde. Adjuntas evidencia que nadie más ve.</p></li>
-        <li class="card"><h3>El índice se actualiza</h3><p class="small mt-2xs">Se agregan los reportes anonimizados y la empresa ve su índice, con derecho a réplica.</p></li>
-      </ol>
-    </div>
   </div>
 </section>
 
-<!-- =========================== EMPRESAS =========================== -->
+<!-- =========================== BUSCAR EMPRESA =========================== -->
 <section id="v-empresas" data-view="empresas" hidden>
   <div class="wrap">
     <div class="view-head">
-      <p class="eyebrow">Perfiles de empleadores</p>
-      <h2>Empresas</h2>
-      <p class="lead">Calificación general, Índice de Respuesta y reseñas moderadas. Las empresas pueden responder cada reseña.</p>
-      <p class="sample-tag">Empresas y reseñas ficticias de ejemplo</p>
+      <p class="eyebrow">Métrica construida por la comunidad</p>
+      <h2>Buscar empresa</h2>
+      <p class="lead">Cada tarjeta se calcula con los reportes anónimos recibidos. Si la empresa que buscas no aparece, nadie la ha reportado todavía.</p>
     </div>
     <div class="toolbar">
-      <div class="field grow-field"><label for="coQ">Buscar</label><input id="coQ" maxlength="80" type="search" placeholder="Nombre, industria o región"></div>
+      <div class="field grow-field"><label for="coQ">Nombre de la empresa</label><input id="coQ" maxlength="80" type="search" placeholder="Escribe el nombre" autocomplete="off"></div>
       <div class="field"><label for="coSort">Ordenar por</label>
         <select id="coSort">
-          <option value="ir">Índice de Respuesta</option>
-          <option value="rating">Calificación</option>
-          <option value="reviews">Cantidad de reseñas</option>
+          <option value="n">Más reportes</option>
+          <option value="ghost">Más ghosting</option>
+          <option value="ir">Mejor Índice de Respuesta</option>
         </select>
       </div>
       <div class="field"><label for="coRegion">Región</label>
@@ -152,13 +158,128 @@
   </div>
 </section>
 
-<!-- =========================== SUELDOS =========================== -->
+<!-- =========================== REPORTAR =========================== -->
+<section id="v-reportar" data-view="reportar" hidden>
+  <div class="wrap">
+    <div class="view-head">
+      <p class="eyebrow">Anónimo y en un minuto</p>
+      <h2>Reportar un proceso</h2>
+      <p class="lead">Cuéntanos con qué empresa y en qué parte del proceso dejaron de responderte. También puedes reportar cuando sí te respondieron: eso hace justa la métrica.</p>
+    </div>
+    <div class="report-layout">
+      <form class="card report-form" id="rpForm" novalidate>
+        <fieldset class="stack-m" id="rpFields">
+          <legend class="sr-only">Datos del proceso</legend>
+
+          <div class="field">
+            <label for="rpEmail">Tu correo</label>
+            <input id="rpEmail" type="email" maxlength="254" autocomplete="email" required placeholder="nombre@correo.cl" spellcheck="false">
+            <p class="hint">No se publica. Queda en tu espacio privado y sirve para evitar reportes duplicados.</p>
+          </div>
+
+          <div class="form-grid">
+            <div class="field full">
+              <label for="rpCompany">Empresa</label>
+              <input id="rpCompany" maxlength="80" required list="rpCompanyList" placeholder="Nombre de la empresa" autocomplete="off">
+              <datalist id="rpCompanyList"></datalist>
+            </div>
+            <div class="field">
+              <label for="rpRegion">Región del cargo</label>
+              <select id="rpRegion" required><option value="">Elige una región</option></select>
+            </div>
+            <div class="field">
+              <label for="rpArea">Área del cargo</label>
+              <select id="rpArea" required><option value="">Elige un área</option></select>
+            </div>
+            <div class="field">
+              <label for="rpChannel">¿Cómo postulaste?</label>
+              <select id="rpChannel" required><option value="">Elige una opción</option></select>
+            </div>
+            <div class="field">
+              <label for="rpMonth">Mes del último contacto</label>
+              <input id="rpMonth" type="month" required>
+            </div>
+          </div>
+
+          <fieldset class="choice-group">
+            <legend>¿Te respondieron?</legend>
+            <div class="choices" id="rpOutcome"></div>
+          </fieldset>
+
+          <fieldset class="choice-group" id="rpStageGroup">
+            <legend>¿En qué parte del proceso dejaron de hablarte?</legend>
+            <div class="choices" id="rpStage"></div>
+          </fieldset>
+
+          <label class="check-row" for="rpTruth">
+            <input type="checkbox" id="rpTruth" required>
+            <span>Declaro que es mi experiencia real y que no incluyo datos de otras personas.</span>
+          </label>
+
+          <p class="form-error" id="rpError" role="alert" hidden></p>
+          <button class="btn lg" type="submit" id="rpSubmit">Enviar reporte anónimo</button>
+        </fieldset>
+      </form>
+
+      <aside class="stack-m">
+        <div class="card notice stack-xs">
+          <h3>Qué pasa con tus datos</h3>
+          <ul class="small">
+            <li><b>Público:</b> empresa, región, área, canal, etapa, resultado y mes. Nada más.</li>
+            <li><b>Privado:</b> tu correo y la lista de tus reportes. Solo tú los ves.</li>
+            <li>Bajo 3 reportes, la empresa solo muestra la cantidad, sin detalle.</li>
+            <li>Puedes borrar tus reportes cuando quieras.</li>
+          </ul>
+        </div>
+        <div class="card stack-s">
+          <h3>Mis reportes</h3>
+          <div id="myReports" class="my-reports"><p class="small">Aún no has enviado reportes.</p></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== MIS POSTULACIONES =========================== -->
+<section id="v-postulaciones" data-view="postulaciones" hidden>
+  <div class="wrap">
+    <div class="view-head">
+      <p class="eyebrow">Tu panel privado</p>
+      <h2>Mis postulaciones</h2>
+      <p class="lead">Lleva el control de tus procesos. Al día 7 te sugerimos un seguimiento y al día 10 puedes reportar el silencio con un clic. Esta lista queda solo en este navegador.</p>
+    </div>
+    <form class="card tracker-form" id="trForm">
+      <div class="field"><label for="trCo">Empresa</label><input id="trCo" required maxlength="80" placeholder="Nombre de la empresa"></div>
+      <div class="field"><label for="trRole">Cargo</label><input id="trRole" required maxlength="80" placeholder="Cargo al que postulaste"></div>
+      <div class="field"><label for="trDate">Última entrevista</label><input id="trDate" type="date" required></div>
+      <div class="field"><label for="trStage">Etapa</label>
+        <select id="trStage"></select>
+      </div>
+      <button class="btn" type="submit">Agregar</button>
+    </form>
+    <div id="trList" class="app-list"></div>
+    <div class="card msg-box" id="msgBox" hidden>
+      <div class="row-between">
+        <h3>Mensaje de seguimiento sugerido</h3>
+        <button class="btn sm" type="button" id="copyMsg">Copiar mensaje</button>
+      </div>
+      <label for="msgText" class="small label-block">Puedes editarlo antes de copiarlo.</label>
+      <textarea id="msgText"></textarea>
+    </div>
+    <div class="row-between mt-l">
+      <p class="small">Los días hábiles se cuentan de lunes a viernes y aún no descuentan feriados nacionales.</p>
+      <button class="btn sm ghost" type="button" id="wipeAll">Borrar mis postulaciones</button>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== SUELDO LIQUIDO =========================== -->
 <section id="v-sueldos" data-view="sueldos" hidden>
   <div class="wrap stack-xl">
     <div class="view-head m-0">
       <p class="eyebrow">Sueldos en pesos chilenos</p>
       <h2>Lo que de verdad llega a tu cuenta</h2>
-      <p class="lead">En Chile se negocia en bruto y se vive con el líquido. Calcula tu sueldo líquido aproximado con los descuentos legales de un contrato indefinido.</p>
+      <p class="lead">En Chile se negocia en bruto y se vive con el líquido. Antes de aceptar una oferta, calcula tu sueldo líquido aproximado con los descuentos legales.</p>
     </div>
 
     <div class="calc">
@@ -189,65 +310,6 @@
         </div>
       </div>
     </div>
-
-    <div class="stack-m">
-      <div class="row-between end">
-        <div><h3>Rangos reportados por cargo</h3><p class="sample-tag mt-3xs">Datos de ejemplo, Región Metropolitana</p></div>
-        <div class="field"><label for="salQ">Filtrar cargo</label><input id="salQ" maxlength="60" type="search" placeholder="Ej: analista"></div>
-      </div>
-      <div class="card scroll-x p-2xs">
-        <table class="salary-table">
-          <thead><tr><th>Cargo</th><th class="num">Bruto p25</th><th class="num">Bruto mediana</th><th class="num">Bruto p75</th><th class="num">Reportes</th></tr></thead>
-          <tbody id="salBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- =========================== ENTREVISTAS =========================== -->
-<section id="v-entrevistas" data-view="entrevistas" hidden>
-  <div class="wrap">
-    <div class="view-head">
-      <p class="eyebrow">Experiencias de postulación</p>
-      <h2>Entrevistas</h2>
-      <p class="lead">Cada experiencia muestra la línea de tiempo completa del proceso, incluido el silencio. Así sabes cuánto demora cada etapa antes de postular.</p>
-      <p class="sample-tag">Experiencias ficticias de ejemplo</p>
-    </div>
-    <div class="grid g2" id="ivList"></div>
-  </div>
-</section>
-
-<!-- =========================== MIS POSTULACIONES =========================== -->
-<section id="v-postulaciones" data-view="postulaciones" hidden>
-  <div class="wrap">
-    <div class="view-head">
-      <p class="eyebrow">Tu panel privado</p>
-      <h2>Mis postulaciones</h2>
-      <p class="lead">Registra tus procesos y te avisamos cuándo corresponde hacer seguimiento. Los datos quedan guardados solo en este navegador.</p>
-    </div>
-    <form class="card tracker-form" id="trForm">
-      <div class="field"><label for="trCo">Empresa</label><input id="trCo" required maxlength="80" placeholder="Nombre de la empresa"></div>
-      <div class="field"><label for="trRole">Cargo</label><input id="trRole" required maxlength="80" placeholder="Cargo al que postulaste"></div>
-      <div class="field"><label for="trDate">Última entrevista</label><input id="trDate" type="date" required></div>
-      <div class="field"><label for="trStage">Etapa</label>
-        <select id="trStage"><option>Entrevista RR.HH.</option><option>Entrevista técnica</option><option>Entrevista final</option><option>Prueba psicolaboral</option></select>
-      </div>
-      <button class="btn" type="submit">Agregar</button>
-    </form>
-    <div id="trList" class="app-list"></div>
-    <div class="card msg-box" id="msgBox" hidden>
-      <div class="row-between">
-        <h3>Mensaje de seguimiento sugerido</h3>
-        <button class="btn sm" type="button" id="copyMsg">Copiar mensaje</button>
-      </div>
-      <label for="msgText" class="small label-block">Puedes editarlo antes de copiarlo.</label>
-      <textarea id="msgText"></textarea>
-    </div>
-    <div class="row-between mt-l">
-      <p class="small">Los días hábiles se cuentan de lunes a viernes y aún no descuentan feriados nacionales.</p>
-      <button class="btn sm ghost" type="button" id="wipeAll">Borrar todos mis datos</button>
-    </div>
   </div>
 </section>
 
@@ -257,7 +319,7 @@
     <div class="view-head m-0">
       <p class="eyebrow">Para empleadores</p>
       <h2>Compromiso SinVisto</h2>
-      <p class="lead">Un acuerdo público y voluntario. Las empresas que lo firman muestran un sello en su perfil y se someten a medición. Si dejan de cumplir, el sello se retira automáticamente.</p>
+      <p class="lead">Un acuerdo público y voluntario. Las empresas que lo firman muestran un sello y se someten a la medición. Si su Índice de Respuesta baja de 80%, el sello se retira.</p>
     </div>
     <div class="grid g2 gap-l items-start">
       <ul class="pledge-list">
@@ -269,8 +331,8 @@
       </ul>
       <div class="card stack-m">
         <h3>Qué recibe la empresa</h3>
-        <p>Panel con su Índice de Respuesta mensual, alertas de procesos que están por vencer el plazo, plantillas de respuesta y derecho a réplica en cada reseña.</p>
-        <p>Mejor reputación como empleador y postulantes que vuelven a postular, porque fueron tratados con respeto.</p>
+        <p>Su Índice de Respuesta mensual, la etapa en que más postulantes quedan sin respuesta y plantillas para cerrar procesos con respeto.</p>
+        <p>La empresa nunca ve quién reportó: solo cifras agregadas.</p>
         <form id="pledgeForm" class="stack-sm">
           <div class="field"><label for="pRut">RUT de la empresa</label><input id="pRut" maxlength="12" inputmode="text" spellcheck="false" placeholder="76.123.456-7" required autocomplete="off"></div>
           <div class="field"><label for="pName">Razón social</label><input id="pName" maxlength="120" placeholder="Nombre legal de la empresa" required></div>
@@ -287,43 +349,39 @@
   <div class="wrap stack-l">
     <div class="view-head m-0">
       <p class="eyebrow">Marco normativo chileno</p>
-      <h2>Leyes y políticas</h2>
+      <h2>Leyes y privacidad</h2>
       <p class="lead">SinVisto opera bajo la ley chilena. Esta página resume en lenguaje simple las normas que aplicamos. No reemplaza asesoría legal; para denuncias formales acude a la Dirección del Trabajo.</p>
-    </div>
-
-    <div class="grid g3">
-      <div class="card law"><p class="eyebrow">Código del Trabajo, art. 2</p><h3>No discriminación en ofertas</h3><p class="small">Ninguna oferta puede exigir condiciones como sexo, edad, estado civil, raza, nacionalidad, religión u otras ajenas a la capacidad para el cargo. Rechazamos las ofertas que lo hagan.</p></div>
-      <div class="card law"><p class="eyebrow">Ley 20.575 y art. 2</p><h3>Sin informes de deudas</h3><p class="small">No se puede condicionar la contratación a la situación comercial del postulante, salvo cargos de gerencia o que administren fondos con facultades generales.</p></div>
-      <div class="card law"><p class="eyebrow">Código del Trabajo, art. 194</p><h3>Sin test de embarazo</h3><p class="small">Ningún empleador puede exigir certificado o examen de embarazo para contratar. Las reseñas que denuncien esta práctica se destacan.</p></div>
-      <div class="card law"><p class="eyebrow">Ley 21.643, Ley Karin</p><h3>Acoso y violencia laboral</h3><p class="small">Desde agosto de 2024 las empresas deben tener protocolos de prevención del acoso laboral, sexual y la violencia en el trabajo. Mostramos si la empresa declara su protocolo.</p></div>
-      <div class="card law"><p class="eyebrow">Ley 21.561</p><h3>Jornada de 40 horas</h3><p class="small">La jornada máxima baja de forma gradual: 44 horas en 2024, 42 horas desde abril de 2026 y 40 horas en 2028. Las ofertas deben indicar jornada.</p></div>
-      <div class="card law"><p class="eyebrow">Ley 21.015</p><h3>Inclusión laboral</h3><p class="small">Empresas con 100 o más trabajadores deben reservar al menos 1% para personas con discapacidad o pensión de invalidez. Se filtra en ofertas inclusivas.</p></div>
-      <div class="card law"><p class="eyebrow">Ley 20.609, Ley Zamudio</p><h3>Antidiscriminación</h3><p class="small">Establece la acción judicial frente a discriminación arbitraria. Si tu caso lo amerita, te orientamos hacia esta vía.</p></div>
-      <div class="card law"><p class="eyebrow">Ley 20.348</p><h3>Igualdad de remuneraciones</h3><p class="small">Hombres y mujeres que hacen el mismo trabajo deben recibir la misma remuneración. Nuestros datos de sueldo permiten ver brechas por cargo.</p></div>
-      <div class="card law"><p class="eyebrow">Ley 21.719</p><h3>Protección de datos personales</h3><p class="small">Nueva ley chilena, con entrada en vigencia en diciembre de 2026 y fiscalizada por la Agencia de Protección de Datos Personales. La aplicamos desde el primer día.</p></div>
     </div>
 
     <div class="grid g2 items-start">
       <details class="card" open>
-        <summary>Política de privacidad y anonimato</summary>
+        <summary>Privacidad y anonimato</summary>
         <ul class="small">
-          <li>Publicamos reseñas sin nombre, correo, RUT ni cargo exacto si eso permite identificarte.</li>
-          <li>La evidencia que adjuntas para verificar un proceso se usa solo para validar y se elimina a los 90 días.</li>
-          <li>Ejerces tus derechos de acceso, rectificación, supresión, oposición, portabilidad y bloqueo desde tu cuenta, con respuesta en un plazo máximo de 30 días corridos.</li>
-          <li>No vendemos datos. Las empresas ven solo cifras agregadas, nunca quién reportó.</li>
-          <li>Los datos se alojan con cifrado en reposo y en tránsito, y con registro de accesos.</li>
+          <li>El reporte público contiene solo empresa, región, área, canal de postulación, etapa, resultado y mes. No contiene correo, nombre ni identificador de la persona.</li>
+          <li>Tu correo se guarda en tu espacio privado, separado del reporte. Nadie más puede leerlo.</li>
+          <li>El detalle de una empresa se publica desde 3 reportes, para que la empresa no pueda deducir quién reportó.</li>
+          <li>Puedes borrar tus reportes en cualquier momento desde "Mis reportes", ejerciendo tu derecho de supresión.</li>
+          <li>No vendemos datos. Las empresas ven solo cifras agregadas.</li>
         </ul>
       </details>
       <details class="card" open>
-        <summary>Normas de la comunidad y moderación</summary>
+        <summary>Por qué no hay texto libre</summary>
         <ul class="small">
-          <li>Habla de tu experiencia y de la empresa. No nombres a personas: un nombre propio hace que la reseña no se publique.</li>
-          <li>No acuses delitos concretos de terceros en una reseña. Las injurias y calumnias son delitos en el Código Penal chileno. Para eso existe la Dirección del Trabajo, el Ministerio Público o los tribunales.</li>
-          <li>Toda reseña pasa por moderación antes de publicarse. Revisamos lenguaje ofensivo, datos personales y reseñas falsas.</li>
-          <li>La empresa tiene derecho a réplica pública en cada reseña, pero no puede borrarla ni editarla.</li>
-          <li>Una empresa no puede pagar para mejorar su puntaje ni su Índice de Respuesta.</li>
+          <li>Los reportes se arman con listas cerradas. Así nadie puede publicar nombres de personas ni acusaciones.</li>
+          <li>Las injurias y calumnias son delitos en el Código Penal chileno. Un dato estructurado ("no respondieron después de la entrevista final") es un hecho verificable, no una opinión ofensiva.</li>
+          <li>Si viviste acoso o discriminación, eso se denuncia ante la Dirección del Trabajo, no en una plataforma de reseñas.</li>
+          <li>Una empresa no puede pagar para mejorar su Índice de Respuesta.</li>
         </ul>
       </details>
+    </div>
+
+    <div class="grid g3">
+      <div class="card law"><p class="eyebrow">Ley 21.719</p><h3>Protección de datos personales</h3><p class="small">Nueva ley chilena, con entrada en vigencia en diciembre de 2026 y fiscalizada por la Agencia de Protección de Datos Personales. La aplicamos desde el primer día.</p></div>
+      <div class="card law"><p class="eyebrow">Código del Trabajo, art. 2</p><h3>No discriminación en ofertas</h3><p class="small">Ninguna oferta puede exigir condiciones como sexo, edad, estado civil, raza, nacionalidad, religión u otras ajenas a la capacidad para el cargo.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 20.575 y art. 2</p><h3>Sin informes de deudas</h3><p class="small">No se puede condicionar la contratación a la situación comercial del postulante, salvo cargos de gerencia o que administren fondos con facultades generales.</p></div>
+      <div class="card law"><p class="eyebrow">Código del Trabajo, art. 194</p><h3>Sin test de embarazo</h3><p class="small">Ningún empleador puede exigir certificado o examen de embarazo para contratar.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 21.643, Ley Karin</p><h3>Acoso y violencia laboral</h3><p class="small">Desde agosto de 2024 las empresas deben tener protocolos de prevención del acoso laboral, sexual y la violencia en el trabajo.</p></div>
+      <div class="card law"><p class="eyebrow">Ley 20.609, Ley Zamudio</p><h3>Antidiscriminación</h3><p class="small">Establece la acción judicial frente a discriminación arbitraria, también en procesos de selección.</p></div>
     </div>
 
     <div class="card stack-xs">
@@ -336,8 +394,7 @@
 
 <footer>
   <div class="wrap">
-    <span>SinVisto, prototipo de plataforma de transparencia laboral para Chile.</span>
-    <span>Todas las empresas, reseñas y cifras de esta versión son ficticias.</span>
+    <span>SinVisto, plataforma chilena contra el ghosting laboral. Prototipo.</span>
     <span>Fotografías: <a href="https://commons.wikimedia.org/wiki/File:Frustrated_woman_working_on_laptop_in_a_bright_kitchen.jpg" target="_blank" rel="noopener noreferrer">Shixart1985</a>, <a href="https://commons.wikimedia.org/wiki/File:Woman_feeling_stressed_while_working_at_a_kitchen_table.jpg" target="_blank" rel="noopener noreferrer">Shixart1985</a> y <a href="https://commons.wikimedia.org/wiki/File:Woman_waiting_and_playing_on_her_phone.jpg" target="_blank" rel="noopener noreferrer">Rawpixel Ltd</a>, bajo licencia <a href="https://creativecommons.org/licenses/by/2.0/deed.es" target="_blank" rel="noopener noreferrer">CC BY 2.0</a>.</span>
   </div>
 </footer>

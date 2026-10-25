@@ -2,19 +2,21 @@
 
 Plataforma de transparencia laboral para Chile. Su objetivo es terminar con el ghosting en los procesos de selección midiendo públicamente si las empresas responden a quienes entrevistan.
 
-## Secciones
+## Cómo funciona
 
-- **Inicio**: propuesta de valor e Índice de Respuesta.
-- **Empresas**: perfiles con calificación, Índice de Respuesta, reseñas y derecho a réplica.
-- **Sueldos**: calculadora de sueldo bruto a líquido (AFP, salud, cesantía, impuesto único) y rangos por cargo.
-- **Entrevistas**: experiencias con la línea de tiempo completa del proceso.
-- **Mis postulaciones**: panel privado que cuenta días hábiles y sugiere mensajes de seguimiento.
-- **Para empresas**: Compromiso SinVisto con validación de RUT.
-- **Leyes y políticas**: resumen de la normativa laboral y de datos personales chilena.
+1. **Reportar**: la persona indica su correo, la empresa, región, área, canal de postulación, mes, si le respondieron y en qué etapa dejaron de hablarle. Todo se elige de listas cerradas; el único texto libre es el nombre de la empresa.
+2. **Separación de datos**: el reporte público (`reports/<id aleatorio>`) no contiene correo ni identificador de la persona. El correo y la lista de reportes propios van al espacio privado `data/users/<uid>/perfil`, que solo esa persona puede leer.
+3. **Métrica**: el buscador agrupa los reportes por empresa (normalizando "S.A.", "SpA", tildes y mayúsculas) y calcula el Índice de Respuesta, el porcentaje de ghosting y la etapa donde se corta el contacto.
+4. **k-anonimato**: con menos de 3 reportes solo se muestra la cantidad, para que la empresa no pueda deducir quién reportó. Bajo 15 reportes la métrica se marca como preliminar.
 
-## Índice de Respuesta
+## Modos de datos
 
-IR = respuestas finales entregadas dentro de 10 días hábiles ÷ procesos con entrevista reportados en los últimos 12 meses. Se publica con 15 reportes o más.
+| Modo | Cuándo | Dónde quedan los reportes |
+|---|---|---|
+| Compartido | Dentro del visor de claude.ai, con la capacidad `db` | Base de datos del artifact, visible para todas las personas con acceso |
+| Demostración | Archivo local, GitHub Pages o Firebase sin backend | Solo en el navegador, con empresas de ejemplo marcadas como tales |
+
+Para un lanzamiento público hace falta una tercera implementación de la capa de datos (por ejemplo Firestore con Cloud Functions), con verificación del correo por enlace y validación de los reportes en el servidor. La interfaz `subscribe / add / remove / loadMine / saveMine` de `js/app.js` está pensada para eso.
 
 ## Estructura
 
