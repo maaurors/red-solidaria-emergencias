@@ -48,10 +48,10 @@
       <a href="#empresas">Buscar empresa</a>
       <a href="#reportar" class="nav-cta">Reportar</a>
       <a href="#postulaciones">Mis postulaciones</a>
+      <a href="#cv">Mejora tu CV</a>
       <a href="#sueldos">Sueldo líquido</a>
       <a href="#compromiso">Para empresas</a>
-      <a href="#legal">Leyes</a>
-      <a href="#terminos">Privacidad y términos</a>
+      <a href="#terminos">Privacidad</a>
     </nav>
   </div>
 </header>
@@ -344,6 +344,71 @@
   </div>
 </section>
 
+<!-- =========================== MEJORA TU CV =========================== -->
+<section id="v-cv" data-view="cv" hidden>
+  <div class="wrap">
+    <div class="view-head">
+      <p class="eyebrow">Retroalimentación que las empresas no te dan</p>
+      <h2>Mejora tu CV</h2>
+      <p class="lead">Si no te responden, al menos que tu CV no sea el motivo. Pega su texto, cuéntanos a qué postulas y recibe sugerencias concretas para ese sector y cargo.</p>
+    </div>
+    <div class="report-layout">
+      <form class="card stack-m" id="cvForm" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="cvArea">Área a la que postulas</label>
+            <select id="cvArea" required><option value="">Elige un área</option></select>
+          </div>
+          <div class="field">
+            <label for="cvLevel">Nivel del cargo</label>
+            <select id="cvLevel" required>
+              <option value="">Elige un nivel</option>
+              <option>Práctica o primer empleo</option>
+              <option>Junior (0 a 2 años)</option>
+              <option>Semi senior (2 a 5 años)</option>
+              <option>Senior (5 años o más)</option>
+              <option>Jefatura o gerencia</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="cvRole">Cargo al que postulas</label>
+            <input id="cvRole" maxlength="80" required placeholder="Ej: Analista de datos, Ejecutiva comercial, Técnico en mantención">
+          </div>
+        </div>
+        <div class="field">
+          <label for="cvText">Texto de tu CV</label>
+          <textarea id="cvText" rows="12" maxlength="12000" placeholder="Copia y pega aquí el texto de tu CV. Puedes borrar antes tu nombre y dirección."></textarea>
+          <p class="hint"><span id="cvCount">0</span>/12.000 caracteres. No guardamos tu CV.</p>
+        </div>
+
+        <div class="card notice stack-xs" id="cvPrivacy" hidden>
+          <h3>Así se enviará, sin tus datos de contacto</h3>
+          <p class="small">Quitamos automáticamente <b id="cvRedactSummary"></b>. Revisa que no quede tu nombre ni tu dirección.</p>
+          <pre class="redacted" id="cvRedacted"></pre>
+        </div>
+
+        <label class="check-row" for="cvConsent">
+          <input type="checkbox" id="cvConsent">
+          <span>Entiendo que, para la parte con IA, el texto sin mis datos de contacto se envía a Claude (Anthropic), que genera las sugerencias. SinVisto no guarda mi CV.</span>
+        </label>
+        <p class="form-error" id="cvError" role="alert" hidden></p>
+        <div class="row-start">
+          <button class="btn lg" type="submit" id="cvSubmit">Revisar mi CV</button>
+          <button class="btn ghost" type="button" id="cvStop" hidden>Detener</button>
+        </div>
+      </form>
+
+      <aside class="stack-m">
+        <div class="card stack-s" id="cvLocal">
+          <h3>Revisión rápida</h3>
+          <p class="small">Se hace en tu navegador, sin enviar nada. Aparece cuando pegues tu CV.</p>
+        </div>
+        <div class="card stack-s" id="cvAi" hidden></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
 <!-- =========================== SUELDO LIQUIDO =========================== -->
 <section id="v-sueldos" data-view="sueldos" hidden>
   <div class="wrap stack-xl">
@@ -404,12 +469,46 @@
         <h3>Qué recibe la empresa</h3>
         <p>Su Índice de Respuesta mensual, la etapa en que más postulantes quedan sin respuesta y plantillas para cerrar procesos con respeto.</p>
         <p>La empresa nunca ve quién reportó: solo cifras agregadas.</p>
-        <form id="pledgeForm" class="stack-sm">
+        <form id="pledgeForm" class="stack-sm" aria-label="Solicitar el sello">
           <div class="field"><label for="pRut">RUT de la empresa</label><input id="pRut" maxlength="12" inputmode="text" spellcheck="false" placeholder="76.123.456-7" required autocomplete="off"></div>
           <div class="field"><label for="pName">Razón social</label><input id="pName" maxlength="120" placeholder="Nombre legal de la empresa" required></div>
           <button class="btn" type="submit">Validar y solicitar el sello</button>
           <p class="small" id="pledgeMsg" role="status"></p>
         </form>
+      </div>
+    </div>
+
+    <!-- Herramienta para empresas: un "No" respetuoso en 30 segundos. -->
+    <div class="stack-m">
+      <div class="view-head m-0">
+        <p class="eyebrow">Un "No" no cuesta nada</p>
+        <h2>Responde en 30 segundos</h2>
+        <p class="lead">La mayoría de las personas solo espera saber si sigue o no en el proceso. Elige la etapa y copia un correo de cierre claro y respetuoso.</p>
+      </div>
+      <div class="report-layout">
+        <form class="card stack-m" id="noForm">
+          <div class="form-grid">
+            <div class="field"><label for="noCandidate">Nombre de la persona</label><input id="noCandidate" maxlength="60" placeholder="Ej: Camila"></div>
+            <div class="field"><label for="noRole">Cargo</label><input id="noRole" maxlength="80" placeholder="Ej: Analista de datos"></div>
+            <div class="field"><label for="noCompany">Tu empresa</label><input id="noCompany" maxlength="80" placeholder="Ej: Banco Ejemplo"></div>
+            <div class="field"><label for="noStage">Etapa a la que llegó</label><select id="noStage"></select></div>
+            <div class="field full"><label for="noReason">Motivo general (opcional)</label>
+              <select id="noReason">
+                <option value="">No indicar motivo</option>
+                <option value="perfil">Otro perfil se ajustó mejor a lo que buscábamos</option>
+                <option value="experiencia">Buscábamos más experiencia en el área</option>
+                <option value="cerrada">La vacante se cerró o se pausó</option>
+                <option value="interna">La vacante se cubrió de forma interna</option>
+              </select>
+            </div>
+            <label class="check-row full" for="noFuture"><input type="checkbox" id="noFuture" checked><span>Ofrecer considerarla para futuros procesos</span></label>
+          </div>
+        </form>
+        <div class="card stack-s">
+          <div class="row-between"><h3>Correo listo para enviar</h3><button class="btn sm" type="button" id="noCopy">Copiar correo</button></div>
+          <label for="noText" class="sr-only">Correo de cierre</label>
+          <textarea id="noText" rows="13"></textarea>
+        </div>
       </div>
     </div>
   </div>
@@ -496,6 +595,7 @@
             <tr><td>Identificador de tu sesión</td><td>Guardar tu espacio privado y permitirte borrar tus reportes</td><td>Necesario para prestar el servicio que pides</td><td>No, nunca</td></tr>
             <tr><td>Reporte: empresa, región, área, canal, etapa, resultado, mes y comentario</td><td>Calcular el Índice de Respuesta de cada empresa</td><td>Tu consentimiento</td><td>Sí, con seudónimo</td></tr>
             <tr><td>Nombre que elijas mostrar</td><td>Firmar tu comentario con tu nombre</td><td>Tu consentimiento expreso y específico</td><td>Solo si lo autorizas</td></tr>
+            <tr><td>Texto de tu CV, sin correo, teléfono, RUT ni enlaces</td><td>Generar sugerencias con IA. No se guarda: se usa una vez y se descarta</td><td>Tu consentimiento, pedido en el momento</td><td>No, nunca</td></tr>
           </tbody>
         </table>
       </div>
@@ -511,7 +611,7 @@
       </ul>
 
       <h3>6. Con quién se comparten</h3>
-      <p>No vendemos, arrendamos ni cedemos datos personales. Las empresas solo ven cifras agregadas y comentarios firmados con seudónimo. Usamos proveedores de alojamiento que tratan los datos por encargo nuestro y bajo nuestras instrucciones. Algunos de esos servidores pueden estar fuera de Chile, y exigimos que ofrezcan un nivel de protección adecuado. Solo entregaríamos información que te identifique por orden de un tribunal competente.</p>
+      <p>No vendemos, arrendamos ni cedemos datos personales. Las empresas solo ven cifras agregadas y comentarios firmados con seudónimo. Usamos proveedores de alojamiento que tratan los datos por encargo nuestro y bajo nuestras instrucciones. Algunos de esos servidores pueden estar fuera de Chile, y exigimos que ofrezcan un nivel de protección adecuado. Si usas "Mejora tu CV", el texto, sin tus datos de contacto, se envía a Anthropic, que provee el modelo de IA Claude, solo para generar las sugerencias. Solo entregaríamos información que te identifique por orden de un tribunal competente.</p>
 
       <h3>7. Tus derechos</h3>
       <p>Tienes derecho de acceso, rectificación, supresión, oposición, portabilidad y bloqueo de tus datos. Puedes borrar tus reportes y quitar tu nombre directamente en "Mis reportes". Para lo demás, escribe al contacto del responsable. Si no quedas conforme con nuestra respuesta, puedes reclamar ante la Agencia de Protección de Datos Personales, cuando esté en funciones, o ante los tribunales de justicia.</p>
@@ -543,7 +643,7 @@
 
 <footer>
   <div class="wrap">
-    <span>SinVisto, plataforma chilena contra el ghosting laboral. Prototipo.</span>
+    <span>SinVisto, plataforma chilena contra el ghosting laboral. Prototipo. <a href="#legal">Leyes laborales</a> · <a href="#terminos">Privacidad y términos</a></span>
     <span>Registro de empresas: nómina de personas jurídicas del <a href="https://www.sii.cl/sobre_el_sii/nominapersonasjuridicas.html" target="_blank" rel="noopener noreferrer">SII</a>, año comercial 2024.</span>
     <span>Fotografías: <a href="https://commons.wikimedia.org/wiki/File:Frustrated_woman_working_on_laptop_in_a_bright_kitchen.jpg" target="_blank" rel="noopener noreferrer">Shixart1985</a>, <a href="https://commons.wikimedia.org/wiki/File:Woman_feeling_stressed_while_working_at_a_kitchen_table.jpg" target="_blank" rel="noopener noreferrer">Shixart1985</a> y <a href="https://commons.wikimedia.org/wiki/File:Woman_waiting_and_playing_on_her_phone.jpg" target="_blank" rel="noopener noreferrer">Rawpixel Ltd</a>, bajo licencia <a href="https://creativecommons.org/licenses/by/2.0/deed.es" target="_blank" rel="noopener noreferrer">CC BY 2.0</a>.</span>
   </div>

@@ -408,3 +408,16 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
 .legal-table th { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 @media (max-width: 900px) { .promise-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .promise-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Mejora tu CV y "un No en 30 segundos" (v5) ---------- */
+.row-start { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.redacted { margin: 0; max-height: 14rem; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: var(--f-mono); font-size: .78rem; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: .7rem; }
+.check-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.check-list li { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: .6rem; align-items: start; }
+.check-list .pill { justify-content: center; }
+.plain-list { margin: 0; padding-left: 1.1rem; display: grid; gap: .3rem; }
+.improve-list { margin: 0; padding-left: 1.3rem; display: grid; gap: .8rem; }
+.improve-list .example { margin-top: .3rem; padding: .45rem .65rem; background: var(--ok-soft); color: var(--ink); border-radius: 6px; font-size: .9rem; }
+.next-step { background: var(--accent-soft); padding: .6rem .8rem; border-radius: 8px; }
+#noText { width: 100%; font: inherit; font-size: .92rem; padding: .8rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.check-row.full { grid-column: 1 / -1; }
