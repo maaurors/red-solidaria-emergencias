@@ -1,0 +1,16 @@
+{
+  "name": "SinVisto Chile",
+  "short_name": "SinVisto",
+  "description": "Reporta de forma anónima a las empresas que no responden a sus postulantes y consulta su Índice de Respuesta.",
+  "lang": "es-CL",
+  "start_url": "./#inicio",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F9FC",
+  "theme_color": "#2B54E0",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

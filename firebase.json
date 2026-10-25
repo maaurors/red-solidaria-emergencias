@@ -7,7 +7,9 @@
       "SECURITY.md",
       ".git/**",
       ".gitignore",
-      ".nojekyll"
+      ".nojekyll",
+      "scripts/**",
+      ".claude/**"
     ],
     "cleanUrls": true,
     "headers": [

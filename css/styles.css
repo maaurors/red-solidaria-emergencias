@@ -378,3 +378,33 @@ footer .wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: spa
 .stage-fill.ask { background: var(--accent); }
 .quote { margin: 0; padding: .55rem .8rem; border-left: 3px solid var(--line); color: var(--ink); font-style: italic; font-size: .95rem; }
 @media (max-width: 900px) { .co-cols { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Confianza, identidad y documento legal (v4) ---------- */
+.mode-banner .trust { display: flex; gap: .6rem; align-items: flex-start; }
+.mode-banner .trust svg { width: 20px; height: 20px; flex: none; margin-top: .1rem; }
+.mode-banner .trust p { margin: 0; }
+.mode-banner a { color: inherit; font-weight: 700; }
+
+.alias-preview { display: inline-block; margin-left: .35rem; padding: .05rem .55rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-family: var(--f-mono); font-size: .82rem; color: var(--accent); }
+.btn.link.inline { padding: 0; font-size: inherit; vertical-align: baseline; }
+.consents { padding-top: .4rem; border-top: 1px solid var(--line); }
+.consents a { font-weight: 700; }
+
+.quote cite { display: block; margin-top: .25rem; font-style: normal; font-size: .8rem; color: var(--muted); }
+.quote cite::before { content: "— "; }
+.my-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+
+.legal-doc { display: grid; gap: 2rem; }
+.legal-doc .view-head { margin: 0; }
+.promise-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.promise-grid .card { display: grid; gap: .35rem; align-content: start; }
+/* Texto legal a un ancho de lectura comodo (~70 caracteres), con jerarquia clara. */
+.legal-text { max-width: 46rem; display: grid; gap: .8rem; }
+.legal-text h3 { margin-top: 1rem; }
+.legal-text p, .legal-text li { color: var(--ink); }
+.legal-text ul { margin: 0; padding-left: 1.2rem; display: grid; gap: .4rem; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.legal-table th, .legal-table td { text-align: left; vertical-align: top; padding: .6rem .7rem; border-bottom: 1px solid var(--line); }
+.legal-table th { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+@media (max-width: 900px) { .promise-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .promise-grid { grid-template-columns: minmax(0, 1fr); } }

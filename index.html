@@ -11,6 +11,21 @@
 <title>SinVisto Chile</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Reporta de forma anónima a las empresas que te dejaron sin respuesta en un proceso de selección y consulta su Índice de Respuesta.">
+<meta name="theme-color" content="#2B54E0">
+<!-- Vista previa al compartir en WhatsApp, LinkedIn, X o Facebook (Open Graph). Al tener dominio, cambiar a URLs absolutas. -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_CL">
+<meta property="og:site_name" content="SinVisto">
+<meta property="og:title" content="SinVisto: reporta a las empresas que te dejaron en visto">
+<meta property="og:description" content="Cuenta de forma anónima en qué etapa una empresa dejó de responderte y consulta su Índice de Respuesta antes de postular.">
+<meta property="og:image" content="img/og-sinvisto.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Mujer frustrada frente a su notebook junto al texto: Postulaste. Te entrevistaron. Y te dejaron en visto.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <!-- Precarga de las dos fuentes que se ven primero en la portada. -->
 <link rel="preload" href="fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/atkinson-hyperlegible-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -35,14 +50,18 @@
       <a href="#postulaciones">Mis postulaciones</a>
       <a href="#sueldos">Sueldo líquido</a>
       <a href="#compromiso">Para empresas</a>
-      <a href="#legal">Leyes y privacidad</a>
+      <a href="#legal">Leyes</a>
+      <a href="#terminos">Privacidad y términos</a>
     </nav>
   </div>
 </header>
 
-<!-- Aviso del modo de datos: compartido (todos ven los reportes) o demostracion (solo este navegador). -->
+<!-- Aviso de confianza: como se protege a quien reporta y donde quedan los reportes. -->
 <div class="mode-banner" id="modeBanner" hidden>
-  <div class="wrap"><p id="modeText"></p></div>
+  <div class="wrap trust">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5l8-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p><b id="modeTitle"></b> <span id="modeText"></span> <a href="#terminos">Cómo te protegemos</a></p>
+  </div>
 </div>
 
 <main id="app">
@@ -228,10 +247,45 @@
             <p class="hint"><span id="rpCommentCount">0</span>/200. Sin nombres de personas, teléfonos ni correos. Se publica cuando la empresa tiene 3 reportes o más.</p>
           </div>
 
-          <label class="check-row" for="rpTruth">
-            <input type="checkbox" id="rpTruth" required>
-            <span>Declaro que es mi experiencia real y que no incluyo datos de otras personas.</span>
-          </label>
+          <fieldset class="choice-group">
+            <legend>¿Cómo quieres aparecer?</legend>
+            <div class="choices">
+              <label class="choice">
+                <input type="radio" name="identity" value="alias" checked>
+                <span>Con un seudónimo aleatorio <span class="alias-preview" id="rpAlias"></span>
+                  <small>Recomendado. Nadie, ni la empresa ni otras personas, puede saber que eres tú. <button class="btn sm link inline" type="button" id="rpAliasNew">Generar otro</button></small></span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="identity" value="name">
+                <span>Con mi nombre<small>Solo si quieres dar la cara. Puedes quitarlo después desde "Mis reportes".</small></span>
+              </label>
+            </div>
+            <div class="stack-xs" id="rpNameBox" hidden>
+              <div class="field">
+                <label for="rpName">Nombre que se mostrará</label>
+                <input id="rpName" maxlength="40" autocomplete="name" placeholder="Ej: Camila R.">
+              </div>
+              <label class="check-row" for="rpNameConsent">
+                <input type="checkbox" id="rpNameConsent">
+                <span>Autorizo de forma expresa que este nombre se publique junto a mi comentario. Sé que la empresa podría verlo y que puedo retirarlo cuando quiera.</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="consents stack-s">
+            <label class="check-row" for="rpTruth">
+              <input type="checkbox" id="rpTruth" required>
+              <span>Declaro que es mi experiencia real y que no incluyo datos de otras personas.</span>
+            </label>
+            <label class="check-row" for="rpTerms">
+              <input type="checkbox" id="rpTerms" required>
+              <span>Acepto los <a href="#terminos">Términos de uso y la Política de privacidad</a>, y consiento que mi correo se trate solo para evitar reportes duplicados.</span>
+            </label>
+            <label class="check-row" for="rpContact">
+              <input type="checkbox" id="rpContact">
+              <span>Opcional: quiero que SinVisto me escriba si la empresa responde a los reportes. Puedo retirar este permiso cuando quiera.</span>
+            </label>
+          </div>
 
           <p class="form-error" id="rpError" role="alert" hidden></p>
           <button class="btn lg" type="submit" id="rpSubmit">Enviar reporte anónimo</button>
@@ -242,10 +296,10 @@
         <div class="card notice stack-xs">
           <h3>Qué pasa con tus datos</h3>
           <ul class="small">
-            <li><b>Público:</b> empresa, región, área, canal, etapa, resultado, mes y tu comentario si lo escribes. Nada más.</li>
-            <li><b>Privado:</b> tu correo y la lista de tus reportes. Solo tú los ves.</li>
+            <li><b>Público:</b> empresa, región, área, canal, etapa, resultado, mes y tu comentario, firmado con un seudónimo aleatorio.</li>
+            <li><b>Nunca público:</b> tu correo, tu cuenta y tu nombre real. Tampoco los entregamos a la empresa.</li>
             <li>Bajo 3 reportes, la empresa solo muestra la cantidad, sin detalle.</li>
-            <li>Puedes borrar tus reportes cuando quieras.</li>
+            <li>Puedes borrar tus reportes cuando quieras. <a href="#terminos">Lee la política completa</a>.</li>
           </ul>
         </div>
         <div class="card stack-s">
@@ -406,6 +460,83 @@
       <h3>¿Necesitas denunciar?</h3>
       <p class="small">La Dirección del Trabajo recibe denuncias por vulneración de derechos laborales y acoso. Su sitio es <a href="https://www.dt.gob.cl" target="_blank" rel="noopener noreferrer">dt.gob.cl</a>. SinVisto no reemplaza a ningún organismo público.</p>
     </div>
+  </div>
+</section>
+
+<!-- =========================== PRIVACIDAD Y TERMINOS =========================== -->
+<section id="v-terminos" data-view="terminos" hidden>
+  <div class="wrap legal-doc">
+    <div class="view-head">
+      <p class="eyebrow">Versión 1 · octubre de 2026</p>
+      <h2>Privacidad y términos de uso</h2>
+      <p class="lead">En simple: no publicamos quién eres, no vendemos datos y puedes borrar lo que aportaste cuando quieras. Abajo está el detalle.</p>
+    </div>
+
+    <div class="promise-grid">
+      <div class="card"><h3>Anónimo por defecto</h3><p class="small">Tu reporte se firma con un seudónimo aleatorio. Tu nombre aparece solo si lo autorizas de forma expresa.</p></div>
+      <div class="card"><h3>Tu correo no sale de aquí</h3><p class="small">No se publica, no se entrega a empresas y solo sirve para evitar reportes duplicados.</p></div>
+      <div class="card"><h3>La empresa no sabe quién fue</h3><p class="small">Ve cifras agregadas, y el detalle aparece desde 3 reportes. Solo revelaríamos datos por orden de un tribunal.</p></div>
+      <div class="card"><h3>Tú decides</h3><p class="small">Puedes borrar tus reportes, quitar tu nombre y retirar cualquier permiso en todo momento.</p></div>
+    </div>
+
+    <article class="legal-text">
+      <h3>1. Normativa que aplicamos</h3>
+      <p>Tratamos los datos conforme a la Ley 19.628 sobre Protección de la Vida Privada, vigente hoy. Además aplicamos desde ya los estándares de la Ley 21.719, que la moderniza y crea la Agencia de Protección de Datos Personales. Su entrada en vigencia está fijada para el 1 de diciembre de 2026, aunque el Congreso discute postergarla. Seguimos sus principios de licitud, finalidad, proporcionalidad, calidad, responsabilidad, seguridad, transparencia y confidencialidad.</p>
+
+      <h3>2. Responsable</h3>
+      <p>SinVisto es un proyecto en etapa de prototipo. Antes del lanzamiento público publicaremos aquí la razón social, el RUT, el domicilio y el correo de contacto del responsable del tratamiento.</p>
+
+      <h3>3. Qué datos tratamos y para qué</h3>
+      <div class="scroll-x">
+        <table class="legal-table">
+          <thead><tr><th>Dato</th><th>Para qué</th><th>Base legal</th><th>¿Se publica?</th></tr></thead>
+          <tbody>
+            <tr><td>Correo electrónico</td><td>Evitar que una persona reporte varias veces el mismo proceso</td><td>Tu consentimiento</td><td>No, nunca</td></tr>
+            <tr><td>Correo, si marcas la casilla opcional</td><td>Avisarte si la empresa responde a los reportes</td><td>Tu consentimiento, aparte del anterior</td><td>No, nunca</td></tr>
+            <tr><td>Identificador de tu sesión</td><td>Guardar tu espacio privado y permitirte borrar tus reportes</td><td>Necesario para prestar el servicio que pides</td><td>No, nunca</td></tr>
+            <tr><td>Reporte: empresa, región, área, canal, etapa, resultado, mes y comentario</td><td>Calcular el Índice de Respuesta de cada empresa</td><td>Tu consentimiento</td><td>Sí, con seudónimo</td></tr>
+            <tr><td>Nombre que elijas mostrar</td><td>Firmar tu comentario con tu nombre</td><td>Tu consentimiento expreso y específico</td><td>Solo si lo autorizas</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>No pedimos ni queremos datos sensibles: salud, origen étnico, religión, orientación sexual, afiliación sindical o situación socioeconómica. Si los incluyes en un comentario, el filtro intentará detenerlos y, si se publican, los retiraremos.</p>
+
+      <h3>4. Consentimiento</h3>
+      <p>Pedimos cada permiso por separado, sin casillas marcadas de antemano. Puedes retirarlo en cualquier momento, sin costo y sin dar razones. Retirarlo no afecta lo que hicimos antes con tu permiso, pero sí detiene el tratamiento desde ese momento. Guardamos la versión de estos términos que aceptaste y la fecha, para poder demostrarlo.</p>
+
+      <h3>5. Cuánto tiempo los guardamos</h3>
+      <ul>
+        <li>Los reportes cuentan en la métrica durante 24 meses desde el mes del proceso. Después se excluyen y se eliminan.</li>
+        <li>Tu correo se elimina cuando borras todos tus reportes o retiras tu consentimiento.</li>
+      </ul>
+
+      <h3>6. Con quién se comparten</h3>
+      <p>No vendemos, arrendamos ni cedemos datos personales. Las empresas solo ven cifras agregadas y comentarios firmados con seudónimo. Usamos proveedores de alojamiento que tratan los datos por encargo nuestro y bajo nuestras instrucciones. Algunos de esos servidores pueden estar fuera de Chile, y exigimos que ofrezcan un nivel de protección adecuado. Solo entregaríamos información que te identifique por orden de un tribunal competente.</p>
+
+      <h3>7. Tus derechos</h3>
+      <p>Tienes derecho de acceso, rectificación, supresión, oposición, portabilidad y bloqueo de tus datos. Puedes borrar tus reportes y quitar tu nombre directamente en "Mis reportes". Para lo demás, escribe al contacto del responsable. Si no quedas conforme con nuestra respuesta, puedes reclamar ante la Agencia de Protección de Datos Personales, cuando esté en funciones, o ante los tribunales de justicia.</p>
+
+      <h3>8. Seguridad</h3>
+      <p>Separamos tu correo de tus reportes, ciframos las conexiones, limitamos los envíos para evitar abusos y no cargamos servicios de terceros que puedan rastrearte. Si ocurriera una vulneración de seguridad que afecte tus datos, la informaremos a la autoridad y a las personas afectadas, como exige la ley.</p>
+
+      <h3>9. Reglas para reportar</h3>
+      <ul>
+        <li>Reporta solo procesos en los que participaste.</li>
+        <li>No incluyas nombres de personas, teléfonos, correos, RUT ni detalles que identifiquen a alguien, incluido tú.</li>
+        <li>Cuenta hechos ("no me respondieron después de la entrevista final"). No acuses delitos: las injurias y calumnias están sancionadas en los artículos 412 a 431 del Código Penal.</li>
+        <li>No se permiten insultos, reportes falsos ni reportes hechos por una empresa contra su competencia.</li>
+      </ul>
+      <p>La Constitución garantiza la libertad de emitir opinión e informar sin censura previa, y también la responsabilidad por los delitos y abusos que se cometan al hacerlo (artículo 19, número 12). Por eso moderamos: podemos retirar contenido que infrinja estas reglas. Cada persona es responsable de lo que reporta.</p>
+
+      <h3>10. Para empresas: revisión y réplica</h3>
+      <p>Si una empresa considera que un reporte es falso o infringe estas reglas, puede pedir su revisión indicando la empresa y el mes. Revisamos la solicitud y, si corresponde, retiramos el contenido. La empresa puede publicar una respuesta, pero no puede editar ni borrar reportes, y nunca le revelamos quién reportó. Una empresa no puede pagar para mejorar su métrica.</p>
+
+      <h3>11. Lo que SinVisto no es</h3>
+      <p>No somos un canal de denuncias. Los incumplimientos laborales, el acoso y la discriminación se denuncian ante la <a href="https://www.dt.gob.cl" target="_blank" rel="noopener noreferrer">Dirección del Trabajo</a> o los tribunales. La información de la plataforma es orientativa: refleja la experiencia de quienes reportan y no una certificación sobre la empresa.</p>
+
+      <h3>12. Cambios</h3>
+      <p>Si cambiamos estos términos, publicaremos una nueva versión con su fecha y te pediremos aceptarla otra vez antes de tu próximo reporte.</p>
+    </article>
   </div>
 </section>
 </main>

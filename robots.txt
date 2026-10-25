@@ -1,0 +1,3 @@
+# Todo el sitio es publico y se puede indexar. Los reportes viven en la base de datos, no en URLs rastreables.
+User-agent: *
+Allow: /

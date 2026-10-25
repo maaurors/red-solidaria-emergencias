@@ -82,6 +82,24 @@ const ASKS = {
   automatico: "Un correo automático me habría bastado"
 };
 
+/* Seudonimos: flora y fauna de Chile + 4 digitos ("Postulante Copihue 4821"). Se genera uno distinto por
+   reporte, no por persona: un seudonimo fijo permitiria juntar todos los reportes de alguien y deducir quien es. */
+const ALIAS_WORDS = ["Copihue", "Cóndor", "Huemul", "Pudú", "Araucaria", "Lenga", "Quillay", "Chungungo", "Picaflor", "Zorro",
+  "Alerce", "Canelo", "Queule", "Ñandú", "Flamenco", "Pingüino", "Loica", "Chucao", "Tenca", "Peumo", "Boldo", "Arrayán",
+  "Coigüe", "Raulí", "Puma", "Vicuña", "Guanaco", "Chinchilla", "Monito", "Litre"];
+const ALIAS_RE = new RegExp("^Postulante (" + ALIAS_WORDS.join("|") + ") \\d{4}$");
+const NAME_RE = /^[\p{L}][\p{L} .'-]{1,39}$/u;
+
+function randomAlias() {
+  // crypto.getRandomValues es impredecible; Math.random no sirve para nada relacionado con anonimato.
+  const r = new Uint32Array(2);
+  crypto.getRandomValues(r);
+  return `Postulante ${ALIAS_WORDS[r[0] % ALIAS_WORDS.length]} ${String(1000 + (r[1] % 9000))}`;
+}
+
+const TERMS_VERSION = "2026-10";
+const RETENTION_MONTHS = 24;
+
 const COMMENT_MAX = 200;
 const K_ANON = 3;        // Reportes minimos para mostrar el detalle de una empresa.
 const PRELIMINAR = 15;   // Bajo esta cantidad la metrica se marca como preliminar.
@@ -253,8 +271,13 @@ function sanitizeReport(id, o) {
   const asks = Array.isArray(o.asks) ? [...new Set(o.asks.filter((a) => Object.hasOwn(ASKS, a)))] : [];
   // Un comentario que no pasa el filtro no invalida el reporte: solo se descarta el comentario.
   const comment = typeof o.comment === "string" && !checkComment(o.comment, o.rut) ? o.comment.trim() : "";
+  // Autor: seudonimo de la lista o nombre autorizado. Cualquier otra cosa se reemplaza por un seudonimo neutro.
+  const a = o.author && typeof o.author === "object" ? o.author : {};
+  const author = a.type === "name" && typeof a.name === "string" && NAME_RE.test(a.name.trim()) && !checkComment(a.name, o.rut)
+    ? { type: "name", name: a.name.trim() }
+    : { type: "alias", alias: typeof a.alias === "string" && ALIAS_RE.test(a.alias) ? a.alias : "Postulante anónimo" };
   return { id: String(id), rut: o.rut, region: o.region, area: o.area, channel: o.channel,
-    outcome: o.outcome, stage, month: o.month, createdAt, asks, comment };
+    outcome: o.outcome, stage, month: o.month, createdAt, asks, comment, author };
 }
 
 /* =====================================================================
@@ -289,6 +312,7 @@ class SharedStore {
     return ref.id;
   }
   async remove(id) { await withRetry(() => this.db.doc("reports/" + id).delete()); }
+  async update(id, patch) { await withRetry(() => this.db.doc("reports/" + id).update(patch)); }
   async loadMine() {
     if (!this.uid) return { email: "", items: [] };
     const snap = await this.db.doc(`data/users/${this.uid}/perfil`).get();
@@ -332,6 +356,10 @@ class LocalStore {
     this.reports = this.reports.filter((r) => r.id !== id);
     this.emit();
   }
+  async update(id, patch) {
+    this.reports = this.reports.map((r) => (r.id === id ? { ...r, ...patch } : r));
+    this.emit();
+  }
   async loadMine() { return sanitizeProfile(local.get(DEMO_MINE_KEY, null)); }
   async saveMine(profile) {
     // En modo demostracion el correo no se guarda: no hay servidor que lo proteja.
@@ -342,10 +370,14 @@ class LocalStore {
 /* Espacio privado: correo y referencias a los reportes propios, validados igual que todo lo demas. */
 function sanitizeProfile(o) {
   const items = o && Array.isArray(o.items) ? o.items : [];
+  const c = o && o.consent && typeof o.consent === "object" ? o.consent : null;
   return {
     email: o && typeof o.email === "string" && EMAIL_RE.test(o.email) ? o.email : "",
+    // Prueba del consentimiento (principio de responsabilidad): que version se acepto, cuando y que permisos opcionales.
+    consent: c && typeof c.terms === "string" ? { terms: c.terms.slice(0, 10), at: Number(c.at) || 0, contact: c.contact === true } : null,
     items: items.slice(0, 200).map((it) => it && typeof it.id === "string" && typeof it.rut === "string" && RUT_RE.test(it.rut) ? {
-      id: it.id.slice(0, 64), rut: it.rut, month: typeof it.month === "string" ? it.month.slice(0, 7) : "", at: Number(it.at) || 0
+      id: it.id.slice(0, 64), rut: it.rut, month: typeof it.month === "string" ? it.month.slice(0, 7) : "", at: Number(it.at) || 0,
+      named: it.named === true
     } : null).filter(Boolean)
   };
 }
@@ -364,9 +396,16 @@ async function withRetry(fn) {
 /* =====================================================================
    METRICAS. Se calculan en el navegador a partir de los reportes.
    ===================================================================== */
+function monthsAgo(n) {
+  const d = new Date(); d.setMonth(d.getMonth() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function aggregate(list) {
   const byRut = new Map();
+  const since = monthsAgo(RETENTION_MONTHS);
   for (const r of list) {
+    if (r.month < since) continue;
     let c = byRut.get(r.rut);
     if (!c) {
       c = { rut: r.rut, n: 0, nunca: 0, tarde: 0, atiempo: 0, stages: {}, asks: {}, asked: 0, comments: [], regions: new Set(), lastMonth: "" };
@@ -377,7 +416,7 @@ function aggregate(list) {
     if (r.outcome === "nunca") c.stages[r.stage] = (c.stages[r.stage] || 0) + 1;
     if (r.asks.length) c.asked++;
     for (const a of r.asks) c.asks[a] = (c.asks[a] || 0) + 1;
-    if (r.comment) c.comments.push(r.comment);
+    if (r.comment) c.comments.push({ text: r.comment, by: r.author.type === "name" ? r.author.name : r.author.alias });
     c.regions.add(r.region);
     if (r.month > c.lastMonth) c.lastMonth = r.month;
   }
@@ -413,7 +452,7 @@ let mine = { email: "", items: [] };
 let canWrite = true;
 
 /* ---------- Navegacion por hash: solo tokens de la lista; cualquier otro valor cae en inicio. ---------- */
-const VIEWS = ["inicio", "empresas", "reportar", "postulaciones", "sueldos", "compromiso", "legal"];
+const VIEWS = ["inicio", "empresas", "reportar", "postulaciones", "sueldos", "compromiso", "legal", "terminos"];
 
 function showView(name) {
   if (!VIEWS.includes(name)) name = "inicio";
@@ -500,7 +539,7 @@ function companyCard(c) {
     </div>
     ${quotes.length ? html`<div class="stack-xs">
       <h4 class="eyebrow">En sus palabras</h4>
-      ${quotes.map((q) => html`<blockquote class="quote">${q}</blockquote>`)}
+      ${quotes.map((q) => html`<blockquote class="quote">${q.text}<cite>${q.by}</cite></blockquote>`)}
     </div>` : ""}
     <a class="btn sm ghost" href="#reportar" data-report-rut="${c.rut}">Reportar mi experiencia con esta empresa</a>
   </article>`;
@@ -560,7 +599,10 @@ function renderMine() {
   }
   setHTML(box, html`${mine.items.map((it) => html`<div class="my-report">
     <span><b>${companyLabel(it.rut).title}</b><br><span class="small">${it.month ? monthLabel(it.month) : ""}</span></span>
-    <button class="btn sm link" type="button" data-del="${it.id}">Borrar</button>
+    <span class="my-actions">
+      ${it.named ? html`<button class="btn sm link" type="button" data-anon="${it.id}">Quitar mi nombre</button>` : ""}
+      <button class="btn sm link" type="button" data-del="${it.id}">Borrar</button>
+    </span>
   </div>`)}`);
 }
 
@@ -595,6 +637,20 @@ function selected(name) {
 
 function selectedAll(name) {
   return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((el) => el.value);
+}
+
+let currentAlias = randomAlias();
+
+function newAlias() {
+  currentAlias = randomAlias();
+  $("#rpAlias").textContent = currentAlias;
+}
+
+/* El campo de nombre y su autorizacion solo aparecen si la persona elige mostrar su nombre. */
+function syncIdentity() {
+  const named = selected("identity") === "name";
+  $("#rpNameBox").hidden = !named;
+  if (!named) { $("#rpName").value = ""; $("#rpNameConsent").checked = false; }
 }
 
 /* Si respondieron a tiempo no hay "etapa del silencio" ni "que te habria bastado": se ocultan. */
@@ -714,10 +770,13 @@ async function submitReport(e) {
   const rut = combo.rut;
   const outcome = selected("outcome");
   const comment = $("#rpComment").value.trim();
+  const useName = selected("identity") === "name";
+  const shownName = $("#rpName").value.trim();
+  const author = useName ? { type: "name", name: shownName } : { type: "alias", alias: currentAlias };
   const report = {
     rut, region: $("#rpRegion").value, area: $("#rpArea").value, channel: $("#rpChannel").value,
     outcome, stage: outcome === "atiempo" ? null : selected("stage"), month: $("#rpMonth").value,
-    asks: outcome === "atiempo" ? [] : selectedAll("ask"), comment,
+    asks: outcome === "atiempo" ? [] : selectedAll("ask"), comment, author,
     // Fecha de creacion redondeada al dia: una hora exacta ayudaria a identificar a quien reporta.
     createdAt: Math.floor(Date.now() / 86400000) * 86400000, v: 2
   };
@@ -732,7 +791,12 @@ async function submitReport(e) {
   if (outcome !== "atiempo" && !report.stage) return formError("Indica en qué parte del proceso dejaron de hablarte.");
   const commentError = checkComment(comment, rut);
   if (commentError) return formError(commentError);
+  if (useName) {
+    if (!NAME_RE.test(shownName)) return formError("Escribe el nombre que quieres mostrar, usando solo letras. Ej: Camila R.");
+    if (!$("#rpNameConsent").checked) return formError("Para publicar tu nombre necesitamos tu autorización expresa. Si prefieres, elige el seudónimo.");
+  }
   if (!$("#rpTruth").checked) return formError("Confirma que es tu experiencia real para enviar el reporte.");
+  if (!$("#rpTerms").checked) return formError("Para enviar el reporte debes aceptar los Términos de uso y la Política de privacidad.");
   if (!sanitizeReport("nuevo", report)) return formError("Revisa los datos del reporte.");
   if (!comment) delete report.comment;
 
@@ -749,7 +813,8 @@ async function submitReport(e) {
   btn.textContent = "Enviando...";
   try {
     const id = await dataStore.add(report);
-    mine = { email, items: [{ id, rut, month: report.month, at: Date.now() }, ...mine.items] };
+    const consent = { terms: TERMS_VERSION, at: Date.now(), contact: $("#rpContact").checked };
+    mine = { email, consent, items: [{ id, rut, month: report.month, at: Date.now(), named: useName }, ...mine.items] };
     await dataStore.saveMine(mine);
     renderMine();
     e.target.reset();
@@ -757,6 +822,8 @@ async function submitReport(e) {
     $("#rpEmail").value = email;
     $("#rpMonth").value = thisMonth();
     $("#rpCommentCount").textContent = "0";
+    newAlias();
+    syncIdentity();
     syncStageVisibility();
     showToast(`Reporte enviado. Gracias: ahora ${name} suma un dato más.`);
     $("#coQ").value = name;
@@ -776,6 +843,20 @@ async function submitReport(e) {
 
 /* Borrar un reporte propio (derecho de supresion). Se confirma con un segundo clic dentro de la pagina. */
 $("#myReports").addEventListener("click", async (e) => {
+  const anon = e.target.closest("button[data-anon]");
+  if (anon) {
+    // Retirar el consentimiento de publicar el nombre: el reporte pasa a firmarse con un seudonimo nuevo.
+    try {
+      await dataStore.update(anon.dataset.anon, { author: { type: "alias", alias: randomAlias() } });
+      mine = { ...mine, items: mine.items.map((it) => (it.id === anon.dataset.anon ? { ...it, named: false } : it)) };
+      await dataStore.saveMine(mine);
+      renderMine();
+      showToast("Listo: tu nombre ya no aparece. El reporte ahora usa un seudónimo.");
+    } catch (err) {
+      showToast("No pudimos quitar tu nombre. Inténtalo de nuevo.");
+    }
+    return;
+  }
   const btn = e.target.closest("button[data-del]");
   if (!btn) return;
   if (btn.dataset.armed !== "1") {
@@ -1058,7 +1139,8 @@ $("#heroSearch").addEventListener("submit", (e) => {
    Dentro del visor de claude.ai existe window.claude.use(); fuera de el
    (archivo local, GitHub Pages) no, y se usa el modo demostracion.
    ===================================================================== */
-function setMode(text, shared) {
+function setMode(title, text, shared) {
+  $("#modeTitle").textContent = title;
   $("#modeText").textContent = text;
   $("#modeBanner").classList.toggle("shared", shared);
   $("#modeBanner").hidden = false;
@@ -1067,7 +1149,7 @@ function setMode(text, shared) {
 function start(store) {
   dataStore = store;
   store.subscribe((list) => { reports = list; renderAll(); }, () => {
-    setMode("Se perdió la conexión con la base de datos. Recarga la página para ver los reportes nuevos.", false);
+    setMode("Sin conexión.", "Recarga la página para ver los reportes nuevos.", false);
   });
   store.loadMine().then((m) => {
     mine = m;
@@ -1085,14 +1167,14 @@ async function connect() {
       const may = user ? await user.can("data.write") : null;
       canWrite = may !== false && Boolean(uid);
       start(new SharedStore(db, uid));
-      setMode(canWrite
-        ? "Base de datos compartida: tu reporte lo verán todas las personas que consulten la empresa."
+      setMode("Tu identidad está protegida.", canWrite
+        ? "Tu reporte se publica con un seudónimo aleatorio. Tu correo y tu cuenta nunca se muestran ni se entregan a la empresa."
         : "Puedes consultar los reportes. Para enviar uno, pide acceso de colaborador a quien te compartió esta página.", true);
       return;
     }
   }
   start(new LocalStore());
-  setMode("Modo demostración: los reportes que envíes se guardan solo en este navegador y nadie más los ve.", false);
+  setMode("Modo demostración.", "Los reportes que envíes se guardan solo en este navegador y nadie más los ve.", false);
 }
 
 /* ---------- Arranque ---------- */
@@ -1105,6 +1187,9 @@ buildChoices("#rpOutcome", "outcome", Object.entries(OUTCOMES).map(([k, o]) => [
 buildChoices("#rpStage", "stage", Object.entries(STAGES).map(([k, label]) => [k, label, ""]));
 buildChoices("#rpAsks", "ask", Object.entries(ASKS).map(([k, label]) => [k, label, ""]), "checkbox");
 setupCombo();
+newAlias();
+$("#rpAliasNew").addEventListener("click", newAlias);
+document.querySelectorAll('input[name="identity"]').forEach((i) => i.addEventListener("change", syncIdentity));
 $("#rpComment").addEventListener("input", () => { $("#rpCommentCount").textContent = String($("#rpComment").value.length); });
 $("#rpOutcome").addEventListener("change", syncStageVisibility);
 $("#rpForm").addEventListener("submit", submitReport);
